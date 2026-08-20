@@ -1,6 +1,6 @@
 import { chatJson } from '../llm'
 import { allOperators, getOperator, resolveDeps } from '../operators/registry'
-import type { Operator, WorkOrder } from '../types'
+import { ALL_RENDER_PATHS, type Operator, type RenderPath, type WorkOrder } from '../types'
 import { layerOps, validateWorkOrder } from './validate'
 
 /**
@@ -196,6 +196,66 @@ function estimates(layers: Operator[][]) {
 }
 
 /** Which pick dragged an unrequested operator into the run, for the gate to show. */
+/**
+ * Which render parameters a set of operators leaves unmeasured.
+ *
+ * The foundry throws rather than render a specimen part-built from defaults, which is the
+ * right rule: a defaulted parameter misstates what was measured. But the planner is free to
+ * pick any subset, and a short opinion routinely draws a six operator plan that touches five
+ * of the seventeen paths. Signing that plan used to produce no specimen at all, which is the
+ * demo failing at the last step with every operator green.
+ */
+export function uncoveredPaths(ids: string[]): RenderPath[] {
+  const covered = new Set<RenderPath>()
+  for (const id of resolveDeps(ids)) {
+    for (const path of getOperator(id).touches) covered.add(path)
+  }
+  return ALL_RENDER_PATHS.filter(path => !covered.has(path))
+}
+
+/**
+ * Adds the fewest operators that cover whatever the planner's picks left unmeasured.
+ *
+ * Greedy set cover, largest contribution first, ties broken by id so the same opinion always
+ * produces the same plan. Field operators sort last because they are the only ones that leave
+ * the building: pulling one in for coverage would spend a scrape the planner deliberately
+ * declined. Nothing else needs them, since every path a field operator touches is also touched
+ * by a forensics, semantics or esoteric operator.
+ */
+export function coverageAdditions(pickedIds: string[]): { id: string; covers: RenderPath[] }[] {
+  const outstanding = new Set(uncoveredPaths(pickedIds))
+  if (!outstanding.size) return []
+
+  const chosen = new Set(resolveDeps(pickedIds))
+  const candidates = allOperators()
+    .filter(op => !chosen.has(op.id))
+    .sort((a, b) => {
+      const wing = Number(a.wing === 'field') - Number(b.wing === 'field')
+      return wing !== 0 ? wing : a.id.localeCompare(b.id)
+    })
+
+  const additions: { id: string; covers: RenderPath[] }[] = []
+  while (outstanding.size) {
+    let best: Operator | undefined
+    let bestCovers: RenderPath[] = []
+    for (const op of candidates) {
+      if (chosen.has(op.id)) continue
+      const covers = op.touches.filter(path => outstanding.has(path))
+      if (covers.length > bestCovers.length) {
+        best = op
+        bestCovers = covers
+      }
+    }
+    // Unreachable while the registration test holds, and a guard rather than an infinite
+    // loop if a future operator library stops covering every path.
+    if (!best) break
+    for (const id of resolveDeps([best.id])) chosen.add(id)
+    for (const path of bestCovers) outstanding.delete(path)
+    additions.push({ id: best.id, covers: bestCovers })
+  }
+  return additions
+}
+
 function pulledBy(id: string, closure: Operator[], picked: Set<string>): string {
   const parents = closure.filter(op => op.needs.includes(id)).map(op => op.id).sort()
   for (const parent of parents) if (picked.has(parent)) return parent
@@ -224,16 +284,34 @@ function assemble(
   }
 
   const pickedIds = new Set(kept.map(p => p.id))
-  const closureIds = resolveDeps([...pickedIds])
+
+  // Coverage is a hard constraint, not a preference. Without this a valid plan can run every
+  // operator green and still strike no specimen, because the foundry refuses to default a
+  // parameter nobody measured.
+  const additions = coverageAdditions([...pickedIds])
+  const withCoverage = new Set([...pickedIds, ...additions.map(a => a.id)])
+
+  const closureIds = resolveDeps([...withCoverage])
   const closure = closureIds.map(getOperator)
   const rationales = new Map(kept.map(p => [p.id, p.rationale]))
+  for (const add of additions) {
+    rationales.set(
+      add.id,
+      `added so the specimen has a measurement for ${add.covers.join(', ')}, which nothing the planner picked measures`,
+    )
+  }
   for (const op of closure) {
     if (rationales.has(op.id)) continue
-    rationales.set(op.id, `pulled in as a dependency of ${pulledBy(op.id, closure, pickedIds)}`)
+    rationales.set(op.id, `pulled in as a dependency of ${pulledBy(op.id, closure, withCoverage)}`)
   }
 
   const layers = safeLayers(closure)
   const notes = [answer.notes?.trim() || 'No planner notes returned.']
+  if (additions.length) {
+    notes.push(
+      `Added ${additions.map(a => a.id).join(', ')} for render coverage: the picked operators left ${additions.flatMap(a => a.covers).length} of the ${ALL_RENDER_PATHS.length} specimen parameters unmeasured, and the foundry will not default one.`,
+    )
+  }
   for (const id of dropped) {
     notes.push(`Dropped "${id}": it is not in the operator library, so it cannot run.`)
   }
