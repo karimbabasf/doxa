@@ -192,7 +192,10 @@ describe('encodePng', () => {
 
   it('refuses a buffer that is not size by size', () => {
     expect(() => encodePng(new Uint8Array(15), 4, { ink: '#ffffff', ground: '#000000' })).toThrow(
-      /15.*16/s,
+      /got 15 pixels/,
+    )
+    expect(() => encodePng(new Uint8Array(15), 4, { ink: '#ffffff', ground: '#000000' })).toThrow(
+      /needs 16/,
     )
   })
 
