@@ -25,6 +25,25 @@ Reuse these. Do not build a new scraper for a target already listed here.
 | CORROBORATE | `c_mt12stqk2d78cqkmn2` | `https://tildes.net/~<group>` | built and verified, 250 clean rows |
 | DEMO-SHOP | not built yet | our own `/demo/shop/[set]` page over a tunnel | build Friday 08-21, after the tunnel URL check in Task 17 Step 2. Pin the ID here. |
 
+### DEMO-SHOP page contract
+
+The page is built and committed. Build Friday's collector against exactly these selectors, and put
+the same field names in the `bdata scraper create` description.
+
+| Field | Selector | Notes |
+|---|---|---|
+| `name` | `.product .name` | |
+| `price` | `.product .price` | **This is the one that breaks.** The break button renames it to `.cost`. Nothing else changes: same text, same layout, same 200. |
+| `sku` | `.product .sku` | |
+| `stock` | `.product .stock` | |
+
+Set slugs are `a`, `b` and `c` at `/demo/shop/a`, `/demo/shop/b`, `/demo/shop/c`, each holding
+different products. They exist so `fetchWithRepair` always has an untouched URL for its verify
+scrape: scrape `a`, verify on `b`. `mustVary` is `name`, `sku`.
+
+The break is a renamed selector on purpose. Healers fix those. They do not fix mis-bound fields,
+which is the entire explanation of the PRIOR-ART failure above.
+
 ## The heal is never believed on its own word
 
 `bdata scraper heal` reported success on the PRIOR-ART collector on 2026-08-20, showed a correct
