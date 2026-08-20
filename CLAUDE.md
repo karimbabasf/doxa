@@ -23,6 +23,19 @@ Reuse these. Do not build a new scraper for a target already listed here.
 |---|---|---|---|
 | PRIOR-ART | `c_mt12spi4173gff7wai` | `https://en.wikiquote.org/wiki/<Topic>` | built. Data good, but `attributed_to` is mis-bound and the heal does not reach production. |
 | CORROBORATE | `c_mt12stqk2d78cqkmn2` | `https://tildes.net/~<group>` | built and verified, 250 clean rows |
+| DEMO-SHOP | not built yet | our own `/demo/shop/[set]` page over a tunnel | build Friday 08-21, after the tunnel URL check in Task 17 Step 2. Pin the ID here. |
+
+## The heal is never believed on its own word
+
+`bdata scraper heal` reported success on the PRIOR-ART collector on 2026-08-20, showed a correct
+preview, and production kept serving the same wrong author on all 149 rows. So:
+
+- `repaired: 'yes'` means re-scraped and re-validated, never "the healer said so".
+- `fetchWithRepair` takes a **required** `verifyInput`: a second input the run has not scraped. After
+  a heal it re-scrapes the original input for the data, then scrapes `verifyInput` for the proof.
+  Both must pass the gate. One re-scrape of the same input cannot tell a real fix from a cache.
+- Healers fix renamed selectors. They do not fix mis-bound fields. The on-camera break is always a
+  renamed class, never a re-bound element.
 
 ### PRIOR-ART real output shape
 

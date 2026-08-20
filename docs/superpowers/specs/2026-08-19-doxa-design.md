@@ -173,25 +173,76 @@ from defaults is a lie about what was measured.
 
 ## 8. Self-healing, and the rule it satisfies
 
-Bright Data's stated judging hook is `bdata scraper heal` working on camera. The field operators
-run behind a schema gate:
+Bright Data's stated judging hook is `bdata scraper heal` working on camera, on the same collector
+ID, with nothing downstream touched by hand. Everything below exists to make that beat land every
+time rather than land if we are lucky.
+
+### Two kinds of break, and only one of them is a healer's job
+
+Both were found by running the real thing on 2026-08-20, not by guessing.
+
+**Renamed selector.** The page changed a class or an element name, so the scraper matches nothing
+and returns empty or zero rows. The repair is "read the new page, find the new name". This is the
+job `bdata scraper heal` was built for, and it does it.
+
+**Mis-bound field.** The scraper reads the wrong element. Nothing is missing, nothing is empty, the
+values are simply wrong. Our Wikiquote collector bound `attributed_to` to a page-level element
+instead of each quote's own citation, so 149 rows carried the same wrong name. The repair is "you
+misunderstood the shape of this page". The heal showed a correct preview, `approve` returned
+`status: done`, and production kept serving the old wrong value.
+
+The demo therefore breaks a selector, never a binding. The Wikiquote mis-binding is not staged and
+not filmed. It goes in the README and on the certificate as the reason the schema gate checks three
+conditions instead of one.
+
+### The repair loop
 
 1. Scrape returns rows.
-2. Rows are validated against the schema the plan declared.
+2. Rows are validated on three conditions: every declared field present, not empty on every row,
+   and not one identical value across every row for fields listed in `mustVary`.
 3. On failure, one repair attempt: `bdata scraper heal` with the exact validation error.
-4. Re-scrape and re-validate.
-5. Second failure stops and calls a human. It does not ship a third guess.
+4. Re-scrape the original input and re-validate. These are the rows the operator needs.
+5. Scrape `verifyInput`, an input untouched in this run, and re-validate that too. This is the
+   proof, not the payload.
+6. `repaired: 'yes'` is written only when both 4 and 5 pass.
+7. A failure at 4 or 5 stops and calls a human. It never ships a third guess.
 
-Two lessons carried over from the deleted `factory-demo` prototype, both real bugs found by
-building it:
-- The plan must be handed the scraper's real field names and may not invent its own, or the
-  schema check tests a field that was never collected.
+Step 5 is what the incident bought. A heal reporting its own success is not evidence, and one
+re-scrape of the same input cannot separate a real fix from a cache. On 2026-08-20 we only proved
+the heal had failed by scraping `/wiki/Art`, a page never touched before. So `verifyInput` is a
+required argument of `fetchWithRepair`, not an option: every caller has to name a second input that
+shows the fix generalises.
+
+Three lessons carried into the code, all found by building:
+- The plan is handed the scraper's real field names and may not invent its own, or the schema check
+  tests a field that was never collected.
 - The repair loop is bounded at two attempts, each told exactly why the last one failed. Unbounded
   repair writes lazy patterns that pass the gate while returning garbage.
+- `repaired: 'yes'` means re-scraped and re-validated on a fresh input. It never means the healer
+  said so.
 
-For the demo we host one source page ourselves and rename its price element mid-run, so the break
-happens on our schedule instead of the web's. A second scraper points at a real public long-tail
-site so the whole thing is not a sandbox.
+### The demo target
+
+A shop page we own, served by the app at `/demo/shop/[set]`, holding structured product records
+across several sets, so a post-heal check always has an untouched URL to reach for. Bright Data
+reaches it through a tunnel to the local machine, so the demo creates no permanent public
+deployment. A third collector is built against that page and pinned in `CLAUDE.md` beside the other
+two.
+
+The break is a button, not a command. Pressing it flips one flag in the database and the page starts
+rendering `class="cost"` where it rendered `class="price"`. The page still returns 200 and still
+looks right to a human, which is how this fails in the wild. A judge presses the button, so the
+break belongs to them rather than to a script the presenter runs.
+
+### Guaranteeing the beat
+
+Shown working is the requirement, so it does not rest on one live attempt:
+- The break is the kind a healer fixes.
+- We own the page, so the break gets tuned until the heal lands every time.
+- The run is rehearsed on Friday until it passes three times consecutively.
+- That clean run is recorded on Friday. Saturday's live run is the bonus, not the insurance.
+- The floor screen streams the heal diff and the SigNoz repair span while the repair runs, so the
+  wait is worth watching instead of dead air.
 
 ## 9. The foundry
 
@@ -290,6 +341,8 @@ database and screens, so nothing structural depends on it.
 | The planner writes an invalid or circular DAG | Validate and topologically sort before the gate renders. Reject and retry once, then fall back to a full-library order. |
 | The UI is the second long pole | It is also the Suit-Up prize, so it gets the hours it needs. Gate and floor first, certificate last. |
 | Live demo depends on network | The specimen path and every forensics and esoteric operator run offline. Only field work needs the network, and a cached batch is kept as the fallback. |
+| The heal does not land on camera | Break a renamed selector on a page we own, never a mis-bound field. Rehearse to three consecutive clean runs on Friday and record that take, so the video never depends on Saturday's network. See section 8. |
+| The tunnel URL changes and the demo collector stops resolving | Checked on Friday before the collector is built: restart the tunnel, re-run the collector against the new URL, confirm it still extracts. If it does not, the shop page gets a small standalone Vercel deployment instead, which needs Karim's say-so in the moment. |
 
 ## 15. Out of scope
 
