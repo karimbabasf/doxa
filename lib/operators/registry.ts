@@ -2,9 +2,38 @@ import type { Operator } from '../types'
 
 const registry = new Map<string, Operator>()
 
+/**
+ * Everything about an operator that defines the capability, minus `run`, whose function
+ * identity changes every time a module is evaluated and so says nothing about sameness.
+ */
+function signature(op: Operator): string {
+  return [
+    op.id,
+    op.wing,
+    op.costUnits,
+    op.estMs,
+    op.estOps,
+    [...op.needs].sort().join('+'),
+    [...op.touches].sort().join('+'),
+  ].join('|')
+}
+
+/**
+ * Registering the same id twice is only a bug when the two are different capabilities.
+ *
+ * Next evaluates a server component's module graph more than once, and every operator
+ * file calls this for itself at import time, so the second pass re-registers all twenty
+ * one. That is a re-evaluation, not a clash, and throwing on it took the gate screen down
+ * with a 500. So an identical signature is tolerated and the newer object wins, while two
+ * genuinely different operators sharing an id still throw: that one is a real collision
+ * and it must not be silently resolved in favour of whichever imported last.
+ */
 export function register(op: Operator): void {
-  if (registry.has(op.id)) {
-    throw new Error(`Operator "${op.id}" is already registered. Ids must be unique.`)
+  const existing = registry.get(op.id)
+  if (existing && signature(existing) !== signature(op)) {
+    throw new Error(
+      `Operator "${op.id}" is already registered as a different operator. Ids must be unique.`,
+    )
   }
   registry.set(op.id, op)
 }

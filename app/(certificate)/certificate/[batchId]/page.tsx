@@ -5,6 +5,11 @@ import { getBatch, getResults, getWorkOrder, openDb } from '@/lib/db'
 import type { Attribution } from '@/lib/foundry/merge'
 import { encodePng, pngDataUrl } from '@/lib/foundry/png'
 import { DEFAULT_SIZE, renderSpecimen } from '@/lib/foundry/render'
+// Importing the barrel is what fills the registry, so the certificate can name the wing and
+// blurb behind every reading. Next evaluates a server component's module graph more than
+// once and every operator file registers itself at import time, which used to throw on the
+// second pass; `register` now treats an identical re-registration as the re-evaluation it is.
+import '@/lib/operators'
 import { allOperators } from '@/lib/operators/registry'
 import {
   ALL_RENDER_PATHS,
@@ -115,9 +120,9 @@ function load(batchId: string): Loaded | null {
 }
 
 /**
- * Catalogue metadata (name, wing, needs) if the operator files happen to be loaded in
- * this process. The page never depends on it: everything a reader needs is in the
- * database, and this only adds the label an operator gives itself.
+ * Catalogue metadata (name, wing, needs) for a result id. The page never depends on it:
+ * everything a reader needs is in the database, and this only adds the label an operator
+ * gives itself. An id the catalogue does not know still reports in full.
  */
 function catalogue(): Map<string, Operator> {
   return new Map(allOperators().map(op => [op.id, op]))

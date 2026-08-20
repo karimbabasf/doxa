@@ -20,9 +20,21 @@ describe('registry', () => {
     expect(() => getOperator('NOPE')).toThrow(/NOPE/)
   })
 
-  it('refuses a duplicate id', () => {
+  it('refuses a duplicate id that is a different operator', () => {
     register(stub('A'))
-    expect(() => register(stub('A'))).toThrow(/already registered/)
+    const impostor = { ...stub('A'), wing: 'esoteric' as const }
+    expect(() => register(impostor)).toThrow(/already registered/)
+  })
+
+  it('refuses a duplicate id whose dependencies differ', () => {
+    register(stub('A'))
+    expect(() => register(stub('A', ['B']))).toThrow(/already registered/)
+  })
+
+  it('tolerates re-registering the identical operator, because that is a module re-evaluation', () => {
+    register(stub('A'))
+    expect(() => register(stub('A'))).not.toThrow()
+    expect(allOperators()).toHaveLength(1)
   })
 
   it('lists everything registered', () => {
