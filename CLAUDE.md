@@ -55,3 +55,26 @@ So `checkRows` gates on three conditions:
 
 Condition 3 is the one that catches a mis-bound selector, and it is the reason the repair loop
 gets a useful failure message instead of shipping 149 rows of confidently wrong data.
+
+### CORROBORATE real output shape
+
+Different shape from PRIOR-ART. This one is flat: one row per topic, no nesting. Code must handle
+both shapes rather than assuming a single convention across collectors.
+
+```
+[ { title, topic_url, group, posted_at, comment_count, product_page_url, input: { url } } ]
+```
+
+Verified 2026-08-20 on `https://tildes.net/~tech`: 250 rows, all seven fields 100% filled,
+250 distinct titles and urls, 104 distinct `posted_at`, 57 distinct `comment_count`.
+
+### mustVary, and why the identical-value gate is opt-in per field
+
+That same run had `group` = "tech" on all 250 rows, correctly, because we scraped one group. A blanket
+identical-value check would fail a perfect scrape. So condition 3 applies only to fields passed in
+`mustVary`, meaning fields whose entire purpose is to differ per row:
+
+| Collector | mustVary |
+|---|---|
+| PRIOR-ART | `quote_text`, `attributed_to` |
+| CORROBORATE | `title`, `topic_url` |
