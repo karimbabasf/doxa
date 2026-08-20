@@ -40,7 +40,7 @@ INTAKE -> PLANNER -> GATE -> FLOOR -> FIELD WORK -> RECONCILIATION -> FOUNDRY ->
 
 | Stage | Module | Job |
 |---|---|---|
-| INTAKE | `lib/intake` | Accept raw text, assign a batch ID, normalise, reject empty or abusive input. |
+| INTAKE | `lib/intake` | Accept raw text, assign a batch ID, normalise whitespace and quotes, reject input under 3 words or over 500 characters. |
 | PLANNER | `lib/planner` | One structured LLM call. Reads the opinion, picks operators, orders them, writes a rationale per pick, estimates cost and runtime. Emits a Work Order. |
 | GATE | `app/(gate)` | Renders the Work Order as a DAG. Operator toggles. Human signs. Port entity created. |
 | FLOOR | `lib/executor` | Topological execution of the approved DAG with a concurrency pool. Streams progress. One SigNoz span per operator. |
@@ -99,7 +99,7 @@ All of these return real numbers from real computation. Nothing is faked or stub
 | `FK-READ` | Flesch-Kincaid grade, Gunning fog | `field.scale` |
 | `PARSE-DEPTH` | syntactic tree height, clause count | `field.octaves` |
 | `CLAIM-EX` | the assertion, stripped of hedging | (feeds field work) |
-| `MODALITY` | must / should / could / may distribution | `frame.fill` |
+| `MODALITY` | must / should / could / may distribution | `frame.fill`, `dither.bias` |
 | `RHETORIC` | analogy, hyperbole, appeal to authority, false dilemma | `primitives.arrangement` |
 | `ZIPF-DRIFT` | lexical rarity against a frequency corpus | `primitives.sizeBias` |
 
@@ -107,7 +107,7 @@ All of these return real numbers from real computation. Nothing is faked or stub
 | ID | Returns | Touches |
 |---|---|---|
 | `EMBED` | the embedding vector | (feeds others, and the future graph) |
-| `TOPIC-REL` | cosine against a fixed topic taxonomy, ranked | `palette.ink` |
+| `TOPIC-REL` | cosine against a fixed topic taxonomy, ranked | `palette.ink`, `dither.levels` |
 | `STANCE` | stance toward the extracted claim, with confidence | `frame.bleed` |
 | `CONTRA-CHK` | per-clause embeddings, internal opposition score | `field.warpAmp` |
 
@@ -217,6 +217,23 @@ quantises it through the chosen dither matrix. Dependency free, deterministic gi
 `seed` comes from `PRIME-SIG`, which derives from the exact input text. Two opinions that score
 identically on every axis still produce different specimens, and the same text always produces the
 same specimen.
+
+### Contribution merge
+
+Six params are deliberately claimed by more than one operator, so a specimen is an argument between
+wings rather than a lookup table. Contributions are `(value, weight)` pairs, and the foundry merges
+them by one rule:
+
+- Numeric params blend as a weighted mean.
+- Categorical params (`field.type`, `primitives.arrangement`, `palette.*`) take the highest weight,
+  ties broken by wing order.
+- Wing weights: field 1.0, forensics 0.8, semantics 0.7, esoteric 0.5. An operator may scale its own
+  weight by its confidence, so a stance detector that is unsure contributes less than one that is not.
+- Attribution stores every contributor with its weight, and names the dominant one. A blended param
+  reports as blended rather than crediting a single assay it did not solely produce.
+
+A param with no contributions is a bug, not a default. The foundry throws if one is unset, because a
+specimen part-built from defaults misrepresents what was measured.
 
 Attribution comes from `touches`: the foundry records which operator wrote each param, so the UI
 can name the assay behind any visual property.
