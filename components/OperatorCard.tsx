@@ -151,7 +151,7 @@ export default function OperatorCard({
 
       {state === 'blocked' && (
         <p className="mt-3 border-t border-rule pt-2 text-[11px] text-state-fail">
-          Held back. {listOf(blockedBy)} {blockedBy.length > 1 ? 'are' : 'is'} switched off and this
+          Held back. {listOf(blockedBy)} {blockedBy.length > 1 ? 'are' : 'is'} not running, and this
           instrument reads {blockedBy.length > 1 ? 'them' : 'it'}.
         </p>
       )}

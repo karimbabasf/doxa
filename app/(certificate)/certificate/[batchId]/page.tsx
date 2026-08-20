@@ -193,11 +193,13 @@ const PRINT_CSS = `
     color: #101010;
     font-size: 9.5pt;
     max-width: none;
-    padding: 0;
+    padding: 0 2mm;
   }
   .certificate a { color: #101010; text-decoration: none; }
   .certificate .keep-together { break-inside: avoid; page-break-inside: avoid; }
-  .certificate section { break-inside: auto; }
+  .certificate section { break-inside: auto; orphans: 2; widows: 2; }
+  /* A section title alone at the foot of a page is not a page of anything. */
+  .certificate .section-head { break-after: avoid; page-break-after: avoid; }
   .certificate * { animation: none !important; opacity: 1 !important; }
   .certificate .specimen-print {
     display: block !important;
@@ -216,7 +218,7 @@ function Absent({ children }: { children: React.ReactNode }) {
 
 function SectionHead({ index, title, note }: { index: string; title: string; note?: string }) {
   return (
-    <div className="mb-3 flex items-baseline gap-3 border-b border-rule pb-1">
+    <div className="section-head mb-3 flex items-baseline gap-3 border-b border-rule pb-1">
       <span className="text-ink-faint">{index}</span>
       <h2 className="tracking-[0.18em] uppercase">{title}</h2>
       {note ? <span className="ml-auto text-ink-faint">{note}</span> : null}
@@ -570,8 +572,8 @@ export default async function CertificatePage({ params }: RouteProps) {
             </Absent>
           </p>
         ) : (
-          <div className="flex flex-col gap-8 lg:flex-row">
-            <div className="lg:w-[512px] lg:shrink-0">
+          <div className="flex flex-col gap-8">
+            <div className="max-w-[512px]">
               <Specimen params={specimen.params} attribution={specimen.attribution} />
               {pngUrl ? (
                 <img
@@ -601,7 +603,7 @@ export default async function CertificatePage({ params }: RouteProps) {
               </p>
             </div>
 
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0">
               <table className="w-full border-collapse text-left">
                 <thead className="text-ink-faint">
                   <tr className="border-b border-rule">

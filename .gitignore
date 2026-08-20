@@ -44,3 +44,8 @@ next-env.d.ts
 .env.local
 *.db
 .playwright-mcp/
+
+# Local run data. The refinery writes opinions and results here; it is not source.
+data/doxa.db
+data/doxa.db-shm
+data/doxa.db-wal

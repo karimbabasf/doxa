@@ -23,7 +23,7 @@ export type { GateOperator } from './OperatorCard'
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
 type Resolved = { on: boolean; blockedBy: string[] }
-type Line = { from: string; to: string; d: string }
+type Line = { from: string; to: string; d: string; x: number; y: number }
 type Geometry = { w: number; h: number; lines: Line[] }
 
 const EMPTY_GEOMETRY: Geometry = { w: 0, h: 0, lines: [] }
@@ -47,6 +47,34 @@ function resolve(layers: GateOperator[][], off: ReadonlySet<string>): Map<string
     }
   }
   return state
+}
+
+type Anchor = { from: string; to: string; x1: number; y1: number; x2: number; y2: number }
+
+/** The gap between columns, and the lane the vertical run of every wire sits in. */
+const GUTTER = 64
+
+/**
+ * Wires run square, not diagonal: out of the right edge, down the gutter, into the
+ * left edge, with rounded corners. A column can hold a dozen instruments, and a
+ * diagonal across that height crosses every card between the two ends. A square run
+ * stays in the gutter, and the cards are opaque, so anything that does cross passes
+ * behind them like cabling behind a panel.
+ */
+function elbow(end: Anchor, mid: number): string {
+  const { x1, y1, x2, y2 } = end
+  if (Math.abs(y2 - y1) < 2) return `M ${x1} ${y1} L ${x2} ${y2}`
+  const radius = Math.max(0, Math.min(10, Math.abs(y2 - y1) / 2, Math.abs(mid - x1), Math.abs(x2 - mid)))
+  const down = y2 > y1 ? 1 : -1
+  const along = mid > x1 ? 1 : -1
+  return [
+    `M ${x1} ${y1}`,
+    `L ${mid - radius * along} ${y1}`,
+    `Q ${mid} ${y1} ${mid} ${y1 + radius * down}`,
+    `L ${mid} ${y2 - radius * down}`,
+    `Q ${mid} ${y2} ${mid + radius} ${y2}`,
+    `L ${x2} ${y2}`,
+  ].join(' ')
 }
 
 function sameGeometry(a: Geometry, b: Geometry): boolean {
@@ -225,24 +253,51 @@ export default function WorkOrderDag({ batchId, operators, signedAt, onSign }: P
       setGeometry(current => (current.lines.length ? EMPTY_GEOMETRY : current))
       return
     }
-    const lines: Line[] = []
+
+    const ends: Anchor[] = []
     for (const edge of edges) {
       const from = cards.current.get(edge.from)
       const to = cards.current.get(edge.to)
       if (!from || !to) continue
       const a = from.getBoundingClientRect()
       const b = to.getBoundingClientRect()
-      const x1 = a.right - base.left
-      const y1 = a.top - base.top + a.height / 2
-      const x2 = b.left - base.left
-      const y2 = b.top - base.top + b.height / 2
-      const bend = Math.max(18, (x2 - x1) / 2)
-      lines.push({
+      ends.push({
         from: edge.from,
         to: edge.to,
-        d: `M ${x1} ${y1} C ${x1 + bend} ${y1}, ${x2 - bend} ${y2}, ${x2} ${y2}`,
+        x1: a.right - base.left,
+        y1: a.top - base.top + a.height / 2,
+        x2: b.left - base.left,
+        y2: b.top - base.top + b.height / 2,
       })
     }
+
+    // Every wire into one column drops down the same gutter, so the lanes are shared
+    // out across it. Otherwise four edges into one column sit on top of each other and
+    // read as one wire.
+    const byGutter = new Map<number, Anchor[]>()
+    for (const end of ends) {
+      const key = Math.round(end.x2)
+      const group = byGutter.get(key)
+      if (group) group.push(end)
+      else byGutter.set(key, [end])
+    }
+
+    const lines: Line[] = []
+    for (const group of byGutter.values()) {
+      group.sort((one, two) => one.y1 - two.y1)
+      const lane = group.length > 1 ? Math.min(9, 40 / (group.length - 1)) : 0
+      group.forEach((end, index) => {
+        const offset = (index - (group.length - 1) / 2) * lane
+        lines.push({
+          from: end.from,
+          to: end.to,
+          d: elbow(end, end.x2 - GUTTER / 2 + offset),
+          x: end.x2,
+          y: end.y2,
+        })
+      })
+    }
+
     const next: Geometry = { w: base.width, h: base.height, lines }
     setGeometry(current => (sameGeometry(current, next) ? current : next))
   }, [edges])
@@ -280,7 +335,8 @@ export default function WorkOrderDag({ batchId, operators, signedAt, onSign }: P
       )}
 
       <div className="overflow-x-auto pb-2">
-        <div ref={boardRef} className="relative inline-flex items-start gap-16 px-1 py-1">
+        <div ref={boardRef} className="relative inline-flex items-start px-1 py-1"
+          style={{ gap: `${GUTTER}px` }}>
           <svg
             className="pointer-events-none absolute left-0 top-0"
             width={geometry.w}
@@ -299,7 +355,10 @@ export default function WorkOrderDag({ batchId, operators, signedAt, onSign }: P
                     stroke={stroke}
                     strokeWidth={hot ? 1.6 : 1}
                     strokeDasharray={live ? undefined : '3 4'}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
                   />
+                  <circle cx={line.x} cy={line.y} r={hot ? 2.6 : 2} fill={stroke} />
                 </g>
               )
             })}
