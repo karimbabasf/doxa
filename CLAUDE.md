@@ -9,8 +9,15 @@ Read `docs/superpowers/plans/2026-08-19-doxa.md` before writing code. Every type
 
 ## Hard rules
 
-- All model calls go through NEAR AI Cloud. Env is `NEAR_AI_BASE_URL` + `NEAR_AI_API_KEY`, read
-  as a pair by `lib/env.ts`. Never read `OPENAI_API_KEY`, `OPENAI_BASE_URL` or `ANTHROPIC_API_KEY`.
+- All model calls go through ONE provider, read as a pair from `NEAR_AI_BASE_URL` +
+  `NEAR_AI_API_KEY` by `lib/env.ts`, which throws if only one is set. Never read `OPENAI_API_KEY`,
+  `OPENAI_BASE_URL` or `ANTHROPIC_API_KEY`: the shell has a stray `OPENAI_API_KEY` and reading it
+  would silently authenticate against a provider nobody chose. That guard is the point, and it holds
+  whatever the pair points at.
+- **The variable names say NEAR_AI and currently point at OpenAI.** Karim's call, 2026-08-20, because
+  he had an OpenAI key to hand. Nothing in the client changed, since both are OpenAI-compatible.
+  Models in use: `gpt-5.2` for chat, `text-embedding-3-small` for embeddings. Renaming the pair to
+  `LLM_BASE_URL` / `LLM_API_KEY` is the honest fix and has not been done.
 - No em dashes or en dashes anywhere: code, comments, docs, commits, UI copy.
 - `lib/operators/`, `lib/executor/`, `lib/foundry/` import nothing from `next/*` or `react`.
 - Local git only. No remote, no push, unless Karim asks in the moment.
