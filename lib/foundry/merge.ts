@@ -108,6 +108,74 @@ function snapMatrix(value: number): 2 | 4 | 8 {
   return best
 }
 
+const HEX = /^#([0-9a-f]{6})$/i
+
+/** WCAG relative luminance. Used only to compare two colours, never shown to anyone. */
+function luminance(hex: string): number {
+  const m = HEX.exec(hex.trim())
+  if (!m) return 0
+  const channel = (v: number) => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  }
+  const n = parseInt(m[1], 16)
+  return (
+    0.2126 * channel((n >> 16) & 255) +
+    0.7152 * channel((n >> 8) & 255) +
+    0.0722 * (n & 255 ? channel(n & 255) : channel(0))
+  )
+}
+
+function contrastRatio(a: string, b: string): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x)
+  return (hi + 0.05) / (lo + 0.05)
+}
+
+/** Moves a colour toward white or black by `amount`, keeping its hue. */
+function shift(hex: string, amount: number, toward: 'light' | 'dark'): string {
+  const m = HEX.exec(hex.trim())
+  if (!m) return hex
+  const n = parseInt(m[1], 16)
+  const target = toward === 'light' ? 255 : 0
+  const mix = (c: number) => Math.round(c + (target - c) * amount)
+  const out = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(mix)
+  return '#' + out.map(c => c.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * The minimum contrast between ink and ground, below which the specimen is a dark square.
+ * 4.5 is WCAG AA for text. A dithered field is a large graphical object, whose floor is only
+ * 3.0, but the specimen gets projected in a demo room and 3.0 still reads as a dark square.
+ */
+export const MIN_INK_CONTRAST = 4.5
+
+/**
+ * Guarantees the mark is visible against the ground it is struck on.
+ *
+ * The operators pick both colours independently: TOPIC-REL sets the ink from the winning
+ * topic, NATAL-CHART and CORROBORATE set the ground. Nothing made them agree, and a real run
+ * produced ink `#1F3A93` on ground `#0b1116`, dark blue on near black, at a contrast ratio
+ * near 1. Every reading behind it was correct and the specimen was unreadable, which on a
+ * projector is indistinguishable from a bug.
+ *
+ * The hues stay exactly as the operators chose them. Only lightness moves, and only on the
+ * ink, so the ground keeps whatever the field wing measured about corroboration. Deterministic,
+ * so the same readings always strike the same specimen.
+ */
+export function legiblePalette(ink: string, ground: string): { ink: string; ground: string } {
+  if (!HEX.test(ink.trim()) || !HEX.test(ground.trim())) return { ink, ground }
+  if (contrastRatio(ink, ground) >= MIN_INK_CONTRAST) return { ink, ground }
+
+  const toward = luminance(ground) < 0.5 ? 'light' : 'dark'
+  let best = ink
+  // Fixed steps rather than a solve, so the result is stable and easy to reason about.
+  for (const amount of [0.2, 0.35, 0.5, 0.65, 0.8, 0.9]) {
+    best = shift(ink, amount, toward)
+    if (contrastRatio(best, ground) >= MIN_INK_CONTRAST) break
+  }
+  return { ink: best, ground }
+}
+
 /**
  * Fold every operator's contributions into one render parameter vector, and record who
  * shaped each parameter. Numeric paths blend as a weighted mean, everything else goes to
@@ -209,10 +277,10 @@ export function mergeContributions(results: OperatorResult[], options: MergeOpti
       contrast: resolved['dither.contrast'] as number,
       bias: resolved['dither.bias'] as number,
     },
-    palette: {
-      ink: resolved['palette.ink'] as string,
-      ground: resolved['palette.ground'] as string,
-    },
+    palette: legiblePalette(
+      resolved['palette.ink'] as string,
+      resolved['palette.ground'] as string,
+    ),
     frame: {
       fill: resolved['frame.fill'] as number,
       bleed: resolved['frame.bleed'] as boolean,
