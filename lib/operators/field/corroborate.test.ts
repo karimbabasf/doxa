@@ -217,7 +217,7 @@ describe('CORROBORATE', () => {
     expect(CORROBORATE.wing).toBe('field')
     expect(CORROBORATE.needs).toEqual(['CLAIM-EX'])
     expect(CORROBORATE.costUnits).toBe(20)
-    expect(CORROBORATE.estMs).toBe(9000)
+    expect(CORROBORATE.estMs).toBe(120_000)
     expect(CORROBORATE.touches).toEqual(['palette.ground'])
   })
 

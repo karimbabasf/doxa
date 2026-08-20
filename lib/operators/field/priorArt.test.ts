@@ -82,7 +82,7 @@ describe('PRIOR_ART', () => {
     expect(PRIOR_ART.wing).toBe('field')
     expect(PRIOR_ART.needs).toEqual(['CLAIM-EX'])
     expect(PRIOR_ART.costUnits).toBe(20)
-    expect(PRIOR_ART.estMs).toBe(9000)
+    expect(PRIOR_ART.estMs).toBe(120_000)
     expect(PRIOR_ART.touches).toEqual(['primitives.count'])
   })
 
