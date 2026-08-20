@@ -1,0 +1,146 @@
+[
+  {
+    "name": "software engineering",
+    "ink": "#1F3A93",
+    "anchorSentences": [
+      "The team refactored the service and shipped the deploy behind a feature flag.",
+      "Code review caught a race condition in the caching layer before release.",
+      "We migrated the database schema and rewrote the API in TypeScript."
+    ]
+  },
+  {
+    "name": "design",
+    "ink": "#A21CAF",
+    "anchorSentences": [
+      "The new layout uses a tighter type scale and more generous white space.",
+      "A designer sketched the interface in Figma before any pixel was final.",
+      "Colour, contrast and hierarchy decide whether a screen reads well."
+    ]
+  },
+  {
+    "name": "business",
+    "ink": "#4A4E69",
+    "anchorSentences": [
+      "The company raised a round and hired a head of sales.",
+      "Revenue grew but margins fell after the pricing change.",
+      "The startup moved its go to market plan toward enterprise customers."
+    ]
+  },
+  {
+    "name": "science",
+    "ink": "#0F766E",
+    "anchorSentences": [
+      "Researchers published a paper describing the experiment and its results.",
+      "The study reported a measurable effect from a small sample.",
+      "Physicists tested the hypothesis against data from the telescope."
+    ]
+  },
+  {
+    "name": "politics",
+    "ink": "#86124A",
+    "anchorSentences": [
+      "The senator voted against the bill during the committee hearing.",
+      "Voters went to the polls and the party lost its majority.",
+      "The government announced new policy on immigration and taxation."
+    ]
+  },
+  {
+    "name": "sport",
+    "ink": "#D24E01",
+    "anchorSentences": [
+      "The team won the match in the final minutes of the second half.",
+      "He broke the record at the championship after a season of training.",
+      "The coach changed the lineup before the playoff game."
+    ]
+  },
+  {
+    "name": "food",
+    "ink": "#A9662B",
+    "anchorSentences": [
+      "The recipe calls for slow roasting the vegetables with garlic and olive oil.",
+      "The restaurant serves handmade pasta and a short wine list.",
+      "Good bread needs time, flour, salt and a hot oven."
+    ]
+  },
+  {
+    "name": "music",
+    "ink": "#6D28D9",
+    "anchorSentences": [
+      "The band released an album of guitar driven songs last spring.",
+      "The producer mixed the track and pushed the bass up in the chorus.",
+      "She played piano at the concert and sang two of her own songs."
+    ]
+  },
+  {
+    "name": "film",
+    "ink": "#23272F",
+    "anchorSentences": [
+      "The director shot the scene in one long take with no cuts.",
+      "The movie won awards for its cinematography and its editing.",
+      "The actor carried the third act with almost no dialogue."
+    ]
+  },
+  {
+    "name": "gaming",
+    "ink": "#55801A",
+    "anchorSentences": [
+      "The game shipped with a new multiplayer mode and better matchmaking.",
+      "Players grind for loot and argue about the balance patch.",
+      "The studio delayed the console release to fix the frame rate."
+    ]
+  },
+  {
+    "name": "health",
+    "ink": "#C1121F",
+    "anchorSentences": [
+      "The doctor ordered blood tests before prescribing the medication.",
+      "Sleep, exercise and diet drive most long term health outcomes.",
+      "The patient recovered after surgery and a course of physiotherapy."
+    ]
+  },
+  {
+    "name": "education",
+    "ink": "#0369A1",
+    "anchorSentences": [
+      "Students sat the exam after a term of lectures and coursework.",
+      "The teacher changed the curriculum to spend more time on writing.",
+      "University tuition rose again and enrolment fell."
+    ]
+  },
+  {
+    "name": "finance",
+    "ink": "#8A6A00",
+    "anchorSentences": [
+      "The market sold off after the central bank raised interest rates.",
+      "The fund rebalanced its portfolio into bonds and cash.",
+      "Inflation, bond yields and company earnings drove the quarter."
+    ]
+  },
+  {
+    "name": "environment",
+    "ink": "#2D6A4F",
+    "anchorSentences": [
+      "Emissions keep rising and the glacier lost mass again this year.",
+      "The forest was cleared for farmland and the river silted up.",
+      "Solar and wind now supply a larger share of the grid."
+    ]
+  },
+  {
+    "name": "transport",
+    "ink": "#0E7490",
+    "anchorSentences": [
+      "The new rail line cut the commute by twenty minutes.",
+      "Traffic on the highway backed up for miles after the crash.",
+      "Cycle lanes and buses move more people than car lanes do."
+    ]
+  },
+  {
+    "name": "philosophy",
+    "ink": "#4C1D95",
+    "anchorSentences": [
+      "The argument rests on what we mean by knowledge and truth.",
+      "Ethics asks what one person owes to other people.",
+      "He questioned whether free will survives in a deterministic universe."
+    ]
+  }
+]
