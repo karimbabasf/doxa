@@ -110,3 +110,24 @@ identical-value check would fail a perfect scrape. So condition 3 applies only t
 |---|---|
 | PRIOR-ART | `quote_text`, `attributed_to` |
 | CORROBORATE | `title`, `topic_url` |
+
+## Measured timings, 2026-08-20
+
+First live run of the whole pipeline. These replace the estimates the plan was written with.
+
+| Thing | Measured | Note |
+|---|---|---|
+| One real scrape | ~115s | The free tier prints "Realtime page limit exceeded, switching to batch mode" and falls back to batch polling. This is the single biggest cost in the app. |
+| `CORROBORATE` end to end | 89.5s | 24 sources checked, `repaired: no`. |
+| Full run, one field operator | ~90s | 29,225 real operations. |
+| Full run, no field operator | ~2 to 4s | Everything else is arithmetic over a sentence. |
+| Planner call, `gpt-5.2` | ~8s | |
+
+Consequences already in the code:
+- `estMs` on both field operators is `120_000`, not the `9000` the plan guessed.
+- The executor's timeout is per operator, `timeoutFor(op, globalMs)` in `lib/executor/run.ts`, because
+  a flat 45s ceiling cut `CORROBORATE` on its first live run while forensics finished in milliseconds.
+- `BRIGHTDATA_CLI` defaults to `./node_modules/.bin/bdata`, not `npx -p @brightdata/cli`, which
+  re-resolved the package on every call.
+
+The repair path is a heal plus two scrapes, so budget four to six minutes, not 90 seconds. See Task 17.
