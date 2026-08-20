@@ -21,8 +21,8 @@ Reuse these. Do not build a new scraper for a target already listed here.
 
 | Purpose | Collector ID | Target | Status |
 |---|---|---|---|
-| PRIOR-ART | `c_mt12spi4173gff7wai` | `https://en.wikiquote.org/wiki/<Topic>` | built, healing an attribution bug |
-| CORROBORATE | pending | `https://tildes.net/~<group>` | building |
+| PRIOR-ART | `c_mt12spi4173gff7wai` | `https://en.wikiquote.org/wiki/<Topic>` | built. Data good, but `attributed_to` is mis-bound and the heal does not reach production. |
+| CORROBORATE | `c_mt12stqk2d78cqkmn2` | `https://tildes.net/~<group>` | built and verified, 250 clean rows |
 
 ### PRIOR-ART real output shape
 
