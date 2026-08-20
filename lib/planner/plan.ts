@@ -303,7 +303,16 @@ export async function composePlan(opinion: string, batchId: string): Promise<Wor
       continue
     }
 
-    const order = assemble(opinion, batchId, answer, attempt > 0 ? rejection : undefined)
+    let order: WorkOrder
+    try {
+      order = assemble(opinion, batchId, answer, attempt > 0 ? rejection : undefined)
+    } catch (err) {
+      // A shape the schema should have prevented, or an operator declaring a need
+      // that is not registered. Either way it is a rejected plan, not a dead run.
+      rejection = `the answer could not be assembled into a work order: "${message(err)}"`
+      continue
+    }
+
     const check = validateWorkOrder(order)
     if (check.ok) return order
     rejection = check.reason

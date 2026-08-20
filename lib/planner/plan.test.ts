@@ -160,4 +160,14 @@ describe('composePlan', () => {
     expect(ids(factual)).not.toEqual(ids(taste))
     expect(factual.estCostUnits).not.toBe(taste.estCostUnits)
   })
+
+  it('falls back when the model returns a shape the assembler cannot use', async () => {
+    model.mockResolvedValue({ picks: [null], notes: 'malformed on purpose' })
+    const order = await composePlan(TASTE, 'batch-10')
+
+    expect(model).toHaveBeenCalledTimes(2)
+    expect(ids(order)).toHaveLength(SPECS.length)
+    expect(order.plannerNotes).toMatch(/full library/i)
+    expect(order.plannerNotes).toMatch(/could not be assembled/)
+  })
 })
