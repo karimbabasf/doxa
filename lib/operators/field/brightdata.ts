@@ -23,7 +23,9 @@ const DEFAULT_TIMEOUT_MS = 180_000
 const MAX_BUFFER = 64 * 1024 * 1024
 
 function cli(): { command: string; prefix: string[] } {
-  const raw = (process.env.BRIGHTDATA_CLI || 'npx -p @brightdata/cli bdata').trim().split(/\s+/)
+  // The local binary, not `npx -p @brightdata/cli`, which re-resolves the package on every
+  // call and adds seconds to an operator that is already the slowest in the library.
+  const raw = (process.env.BRIGHTDATA_CLI || './node_modules/.bin/bdata').trim().split(/\s+/)
   return { command: raw[0], prefix: raw.slice(1) }
 }
 

@@ -129,7 +129,7 @@ export const CORROBORATE: Operator = {
   blurb: 'Reads a forum that argued about this already and counts who lands on which side.',
   needs: ['CLAIM-EX'],
   costUnits: 20,
-  estMs: 9000,
+  estMs: 120_000,
   estOps: 500,
   touches: ['palette.ground'],
   async run(ctx) {

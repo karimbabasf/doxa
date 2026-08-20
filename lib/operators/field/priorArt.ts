@@ -115,7 +115,7 @@ export const PRIOR_ART: Operator = {
   blurb: 'Finds the closest published version of the same take, and dates it.',
   needs: ['CLAIM-EX'],
   costUnits: 20,
-  estMs: 9000,
+  estMs: 120_000,
   estOps: 300,
   touches: ['primitives.count'],
   async run(ctx) {

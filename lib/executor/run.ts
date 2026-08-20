@@ -24,6 +24,23 @@ export type RunOpts = {
 }
 
 /**
+ * One global timeout cannot serve both wings. A forensics operator is arithmetic over a
+ * sentence and finishes in single-digit milliseconds; a field operator shells out to the
+ * Bright Data CLI, which on the free tier drops out of realtime into batch mode and takes
+ * around two minutes. Measured 2026-08-20: 115s for 200 rows off one Tildes group.
+ *
+ * So the ceiling scales with what the operator itself declares. `estMs` is the operator's own
+ * claim about how long it needs, and the multiplier is the headroom for a slow day. The global
+ * `timeoutMs` stays the floor, so nothing gets a shorter leash than the caller asked for.
+ */
+export const TIMEOUT_HEADROOM = 3
+
+export function timeoutFor(op: Operator, globalMs: number): number {
+  const declared = Number.isFinite(op.estMs) && op.estMs > 0 ? op.estMs * TIMEOUT_HEADROOM : 0
+  return Math.max(globalMs, declared)
+}
+
+/**
  * Runs the DAG that `needs` describes. Every operator starts the moment its own
  * needs have landed, so an operator is never held back by an unrelated slow one
  * in the same layer. `layer()` still runs first, for cycle detection and for the
@@ -59,7 +76,7 @@ export async function executeRun(ops: Operator[], ctx: Ctx, opts: RunOpts): Prom
     const at = Date.now()
     emit({ kind: 'start', id: op.id, at })
     const work = async () => {
-      const result = await withTimeout(op.run(ctx), opts.timeoutMs, op.id)
+      const result = await withTimeout(op.run(ctx), timeoutFor(op, opts.timeoutMs), op.id)
       if (!result || typeof result !== 'object') {
         throw new Error(`Operator "${op.id}" resolved without a result.`)
       }
