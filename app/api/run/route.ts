@@ -5,6 +5,7 @@ import { executeRun, type FloorEvent, type RunOpts } from '@/lib/executor/run'
 import { layer } from '@/lib/executor/topo'
 import { mergeContributions, type Attribution } from '@/lib/foundry/merge'
 import type { Ctx, Operator, OperatorResult, RenderParams, Wing } from '@/lib/types'
+import { initTracing, startBatch, type BatchTrace } from '@/lib/tracing'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -52,6 +53,13 @@ export type RunDeps = {
    * SigNoz being configured.
    */
   span?: RunOpts['span']
+  /**
+   * A live batch trace. When present its span hook wins over `span`, its trace id is stamped
+   * onto every stored result so the certificate can link a reading back to SigNoz, and it is
+   * closed when the stream closes. Absent in unit tests, which is why nothing here may assume
+   * it exists.
+   */
+  trace?: BatchTrace
 }
 
 const DEFAULT_CONCURRENCY = 4
@@ -76,9 +84,17 @@ export async function POST(request: Request): Promise<Response> {
   // scope keeps the route unit-testable while the operator library is still being written.
   const { getOperator } = await import('@/lib/operators/registry')
   await import('@/lib/operators')
+
+  // Tracing is opened here rather than inside handleRun so unit tests never touch it.
+  // Both calls are no-ops when SigNoz is not configured, and neither one throws, so a
+  // missing key costs the run nothing.
+  initTracing()
+  const batchId = readBatchId(body)
+  const trace = batchId ? startBatch(batchId, { 'doxa.entry': 'api/run' }) : undefined
+
   // The same handle the gate writes the signed order with, so the run reads the batch the
   // human actually signed and Next's module reloading does not leak a connection per request.
-  return handleRun(body, { db: gateDb(), lookup: getOperator })
+  return handleRun(body, { db: gateDb(), lookup: getOperator, trace })
 }
 
 /**
@@ -152,10 +168,12 @@ export async function handleRun(body: unknown, deps: RunDeps): Promise<Response>
         const run = await executeRun(ops, ctx, {
           concurrency,
           timeoutMs: deps.timeoutMs ?? DEFAULT_TIMEOUT_MS,
-          span: deps.span,
+          span: deps.trace?.span ?? deps.span,
           onEvent: (event) => {
             send(event)
-            if (event.kind === 'done') land(deps.db, batchId, ctx.results.get(event.id), send)
+            if (event.kind === 'done') {
+              land(deps.db, batchId, ctx.results.get(event.id), send, deps.trace)
+            }
           },
         })
 
@@ -188,6 +206,9 @@ export async function handleRun(body: unknown, deps: RunDeps): Promise<Response>
         send({ kind: 'fail', id: 'RUN', ms: 0, error: messageOf(err) })
       } finally {
         clearInterval(heartbeat)
+        // Closes the batch root span and flushes. It never rejects and never waits longer
+        // than its own flush budget, so a slow collector cannot hold the stream open.
+        await deps.trace?.end()
         open = false
         controller.close()
       }
@@ -216,14 +237,20 @@ function land(
   batchId: string,
   result: OperatorResult | undefined,
   send: (event: StreamEvent) => void,
+  trace?: BatchTrace,
 ): void {
   if (!result) return
+  // The certificate prints a trace id per operator, so it is stamped on at write time.
+  // `traceIdOf` returns an empty string when the operator was not traced, and an empty
+  // string is not written: a blank id on the certificate would read as a real one.
+  const traceId = trace?.traceIdOf(result.id)
+  const stored: OperatorResult & { traceId?: string } = traceId ? { ...result, traceId } : result
   // EMBED parks its vector in notes[0] as JSON, since readings hold scalars only. It is the
   // one seam the similarity graph needs, and it costs a line here instead of a migration later.
   const vector = result.id === 'EMBED' ? readVector(result.notes?.[0]) : undefined
   const spoken = vector ? (result.notes ?? []).slice(1) : (result.notes ?? [])
   try {
-    insertResult(db, batchId, result)
+    insertResult(db, batchId, stored)
     if (vector) setBatchEmbedding(db, batchId, vector)
   } catch (err) {
     send({ kind: 'note', id: result.id, text: `not recorded: ${messageOf(err)}` })
