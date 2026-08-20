@@ -42,7 +42,7 @@ INTAKE -> PLANNER -> GATE -> FLOOR -> FIELD WORK -> RECONCILIATION -> FOUNDRY ->
 |---|---|---|
 | INTAKE | `lib/intake` | Accept raw text, assign a batch ID, normalise whitespace and quotes, reject input under 3 words or over 500 characters. |
 | PLANNER | `lib/planner` | One structured LLM call. Reads the opinion, picks operators, orders them, writes a rationale per pick, estimates cost and runtime. Emits a Work Order. |
-| GATE | `app/(gate)` | Renders the Work Order as a DAG. Operator toggles. Human signs. Port entity created. |
+| GATE | `app/(gate)` | Renders the Work Order as a DAG. Operator toggles. Human signs. Signature stored on the batch. |
 | FLOOR | `lib/executor` | Topological execution of the approved DAG with a concurrency pool. Streams progress. One SigNoz span per operator. |
 | FIELD WORK | `lib/field` | Bright Data operators. Corroboration sweep and prior art. Schema gate plus bounded repair. |
 | RECONCILIATION | `lib/reconcile` | One LLM call reads every reading, sober and esoteric alike, and writes one dry paragraph of plain English. |
@@ -152,8 +152,8 @@ type WorkOrder = {
 
 The gate screen renders the DAG from `needs`, shows each rationale, and lets the human switch
 operators off. Switching off an operator that others depend on disables its dependents too, and
-the UI says so rather than failing at run time. Signing writes the work order to Port as an entity
-and unlocks the floor.
+the UI says so rather than failing at run time. Signing stamps the work order row with a signature
+time and unlocks the floor. The signed order is the plan of record and it lives in this app.
 
 ## 7. Execution
 
@@ -250,8 +250,15 @@ video and the LinkedIn post (Daily Bugle track).
 | Sponsor | Role | Load-bearing because |
 |---|---|---|
 | Bright Data | Field work: corroboration and prior art. Scraper Studio via the CLI, collector IDs pinned in `CLAUDE.md`. | It is the only source of outside evidence. No scraper, no verdict on whether the opinion holds up. |
-| Port | Work orders and the operator catalogue as entities. Dashboard shows factory health across batches. | The approval gate writes there. It is the plan of record. |
 | SigNoz | One span per operator, one trace per batch. Latency, failure and repair events. | The floor screen and the certificate both read from it. |
+
+**Port is deliberately not used.** Karim cut it on 2026-08-19. The consequence is recorded here so it
+does not get re-argued: Zero Downtime's grand prize is scored on "Best Full-Stack Integration" of
+Port, Bright Data and SigNoz, so that prize is out of reach. The two track prizes it does compete for
+(Best Bright Data Scraper Studio Integration, Best SigNoz Integration) are unaffected, and
+Scrape-Verse never mentions Port at all, so its whole prize pool is unaffected. Everything Port would
+have held (the signed work order, the operator catalogue, batch health) is already in this app's own
+database and screens, so nothing structural depends on it.
 
 ## 12. Stack
 
@@ -279,7 +286,7 @@ video and the LinkedIn post (Daily Bugle track).
 | Risk | Handling |
 |---|---|
 | Bright Data scraper creation takes 5 to 25 minutes per target | Starts first, before any UI work. |
-| Four sponsor accounts do not exist yet (Bright Data plus promo code, Port, SigNoz) | Karim's task, in parallel with the build. Blocks integration, not the engine. |
+| Two sponsor accounts do not exist yet (Bright Data plus its promo code, SigNoz) | Karim's task, in parallel with the build. Blocks integration, not the engine. |
 | The planner writes an invalid or circular DAG | Validate and topologically sort before the gate renders. Reject and retry once, then fall back to a full-library order. |
 | The UI is the second long pole | It is also the Suit-Up prize, so it gets the hours it needs. Gate and floor first, certificate last. |
 | Live demo depends on network | The specimen path and every forensics and esoteric operator run offline. Only field work needs the network, and a cached batch is kept as the fallback. |
