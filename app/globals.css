@@ -1,26 +1,202 @@
 @import "tailwindcss";
 
+/*
+ * DOXA's visual system. One place, so three screens do not invent three of them.
+ *
+ * Register: industrial and forensic. This is a factory readout, not a consumer app.
+ * The specimen it strikes is 1-bit dithered, so the interface echoes that: a near
+ * black ground, bone ink, hairline rules, and colour used only to carry state.
+ *
+ * Type is monospace by default because almost every value on screen is a reading.
+ * Prose opts into the sans stack. Both are system stacks on purpose: no network at
+ * build, no font swap, and nothing to fail in a demo room.
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Ground and ink. Neither is pure, because pure black on pure white reads cheap. */
+  --ground: #0b0b0c;
+  --ground-raised: #131315;
+  --ground-sunk: #070708;
+  --ink: #e8e6e1;
+  --ink-dim: #9a9793;
+  --ink-faint: #5c5a58;
+  --rule: #232326;
+  --rule-bright: #35353a;
+
+  /* One accent. The refinery's signal colour. */
+  --signal: #d8552a;
+
+  /* Operator state. These four are the floor's whole vocabulary. */
+  --state-idle: #5c5a58;
+  --state-live: #d8b02a;
+  --state-ok: #6f9b5c;
+  --state-fail: #c4453a;
+  /* Repair gets its own colour: it is the beat the demo is built on and it must
+     never be mistaken for a plain failure or a plain success. */
+  --state-repair: #4a8fb0;
+
+  /* The four wings. Distinguishable in greyscale too, since the specimen is 1-bit. */
+  --wing-field: #d8552a;
+  --wing-forensics: #c9c4bb;
+  --wing-semantics: #7f9dc0;
+  --wing-esoteric: #9b7fc0;
+
+  /*
+   * Easing. The CSS built-ins are too weak to read as intentional.
+   * ease-in is deliberately absent: it delays the first frame, which is the exact
+   * moment the eye is on the element, so it feels slower at identical duration.
+   */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+
+  /* Durations. Everything interactive stays under 300ms. */
+  --dur-press: 120ms;
+  --dur-tip: 150ms;
+  --dur-panel: 200ms;
+  --dur-row: 240ms;
+
+  --font-mono-stack: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --font-sans-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-ground: var(--ground);
+  --color-ground-raised: var(--ground-raised);
+  --color-ground-sunk: var(--ground-sunk);
+  --color-ink: var(--ink);
+  --color-ink-dim: var(--ink-dim);
+  --color-ink-faint: var(--ink-faint);
+  --color-rule: var(--rule);
+  --color-rule-bright: var(--rule-bright);
+  --color-signal: var(--signal);
+  --color-state-idle: var(--state-idle);
+  --color-state-live: var(--state-live);
+  --color-state-ok: var(--state-ok);
+  --color-state-fail: var(--state-fail);
+  --color-state-repair: var(--state-repair);
+  --color-wing-field: var(--wing-field);
+  --color-wing-forensics: var(--wing-forensics);
+  --color-wing-semantics: var(--wing-semantics);
+  --color-wing-esoteric: var(--wing-esoteric);
+  --font-mono: var(--font-mono-stack);
+  --font-sans: var(--font-sans-stack);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* DOXA is dark only. A refinery floor has one lighting condition. */
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-mono-stack);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.prose-sans {
+  font-family: var(--font-sans-stack);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/*
+ * Pressable things scale down on press. It is the cheapest way to make an
+ * interface feel like it heard you, and it is the one animation every control gets.
+ */
+button,
+[role="button"] {
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+button:active,
+[role="button"]:active {
+  transform: scale(0.97);
+}
+
+/* Hover effects only where a real pointer exists, or a tap fires them by accident. */
+@media (hover: hover) and (pointer: fine) {
+  .hoverable {
+    transition: background-color var(--dur-press) ease, border-color var(--dur-press) ease;
+  }
+}
+
+/*
+ * Reduced motion means fewer and gentler animations, not none. Opacity and colour
+ * still carry meaning on the floor, so they stay. Movement goes.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/*
+ * ANIMATION POLICY, decided per how often a thing is seen. Read this before adding
+ * motion to any DOXA screen.
+ *
+ *   Op counter, live readings, anything ticking many times a second
+ *     No animation on the value. A transition on a fast-changing number reads as lag.
+ *
+ *   Gate operator toggles, seen tens of times per session
+ *     The press scale above and nothing else.
+ *
+ *   Keyboard-initiated actions (sign, run, escape)
+ *     No animation at all. These get repeated and motion makes them feel slow.
+ *
+ *   A floor row changing state, seen a handful of times per batch
+ *     Animate. This is the spectacle the demo is built on. var(--dur-row), ease-out,
+ *     stagger 40ms between rows, never more.
+ *
+ *   The certificate, seen once per batch
+ *     A reveal is fine here. It is the finished artifact.
+ *
+ * Entrances never start at scale(0). Nothing in the world appears from nothing.
+ * Start at scale(0.97) with opacity 0.
+ */
+
+@keyframes doxa-row-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.row-in {
+  animation: doxa-row-in var(--dur-row) var(--ease-out) both;
+}
+
+/* The one continuous animation in the app: an operator that is currently running. */
+@keyframes doxa-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.is-live {
+  animation: doxa-breathe 1.4s ease-in-out infinite;
+}
+
+.rule {
+  border-color: var(--rule);
+}
+
+::selection {
+  background: var(--signal);
+  color: var(--ground);
 }
