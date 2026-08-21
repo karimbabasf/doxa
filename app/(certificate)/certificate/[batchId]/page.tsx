@@ -590,6 +590,17 @@ export default async function CertificatePage({ params }: RouteProps) {
               <p className="mt-2 text-ink-faint print:hidden">
                 Hover the specimen to read which assay shaped the pixel under the pointer.
               </p>
+              {/* Back to where this specimen sits among the others. The certificate is the
+                  end of one run, not the end of the product, and without this the only way
+                  back to the graph is the browser button. */}
+              <p className="mt-1 print:hidden">
+                <a
+                  href={`/?open=${batch.id}`}
+                  className="text-signal underline decoration-dotted underline-offset-2"
+                >
+                  See this opinion in the graph
+                </a>
+              </p>
               <p className="mt-1">
                 {pngUrl && png ? (
                   <a
