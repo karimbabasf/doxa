@@ -200,3 +200,459 @@ button:active,
   background: var(--signal);
   color: var(--ground);
 }
+
+/* ---------------------------------------------------------------------------
+   The graph, and the dive into one node.
+
+   Extends the tokens above; defines no new colour. The wings keep the hues the
+   certificate already gave them, so an operator reads the same on both screens.
+   --------------------------------------------------------------------------- */
+
+.graph-view {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--ground-sunk);
+}
+
+.graph-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+.graph-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 16px 22px;
+  font-family: var(--font-mono-stack);
+  font-size: 11px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--ink-dim);
+  pointer-events: none;
+}
+
+.graph-mark {
+  color: var(--ink);
+  letter-spacing: 0.36em;
+}
+
+.graph-count {
+  color: var(--ink-faint);
+}
+
+.graph-add {
+  margin-left: auto;
+  pointer-events: auto;
+  padding: 6px 12px;
+  border: 1px solid var(--rule);
+  color: var(--ink-dim);
+  text-decoration: none;
+  transition:
+    border-color var(--dur-tip) var(--ease-out),
+    color var(--dur-tip) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.graph-add:hover {
+  border-color: var(--rule-bright);
+  color: var(--ink);
+}
+
+.graph-add:active {
+  transform: scale(0.97);
+}
+
+.graph-hint,
+.graph-empty,
+.graph-error {
+  position: absolute;
+  left: 22px;
+  bottom: 20px;
+  max-width: 40ch;
+  margin: 0;
+  font-family: var(--font-mono-stack);
+  font-size: 11px;
+  line-height: 1.65;
+  color: var(--ink-faint);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity var(--dur-panel) var(--ease-out);
+}
+
+.graph-error {
+  color: var(--state-fail);
+}
+
+.graph-view[data-diving='yes'] .graph-hint {
+  opacity: 0;
+}
+
+/* -- the dive ------------------------------------------------------------- */
+
+.dive {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(56vw, 780px);
+  overflow-y: auto;
+  padding: 26px 26px 60px;
+  background: color-mix(in srgb, var(--ground) 92%, transparent);
+  border-left: 1px solid var(--rule);
+  backdrop-filter: blur(14px);
+  font-family: var(--font-mono-stack);
+  color: var(--ink-dim);
+  /* Enter from its own edge, so closing reverses the way it came in. */
+  animation: dive-in var(--dur-panel) var(--ease-out) both;
+}
+
+@keyframes dive-in {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+}
+
+.dive-close {
+  position: sticky;
+  top: 0;
+  float: right;
+  padding: 5px 10px;
+  background: var(--ground-raised);
+  border: 1px solid var(--rule);
+  color: var(--ink-faint);
+  font: inherit;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    color var(--dur-tip) var(--ease-out),
+    border-color var(--dur-tip) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.dive-close:hover {
+  color: var(--ink);
+  border-color: var(--rule-bright);
+}
+
+.dive-close:active {
+  transform: scale(0.97);
+}
+
+.dive-loading,
+.dive-error {
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+.dive-error {
+  color: var(--state-fail);
+}
+
+.dive-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.dive-batch {
+  color: var(--signal);
+}
+
+.dive-opinion {
+  margin: 14px 0 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--signal);
+  font-family: var(--font-sans-stack);
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.dive-planner {
+  margin-top: 14px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.dive-planner summary {
+  cursor: pointer;
+  color: var(--ink-faint);
+  letter-spacing: 0.06em;
+}
+
+.dive-planner p {
+  margin: 8px 0 0;
+  color: var(--ink-dim);
+  text-wrap: pretty;
+}
+
+.dive-layers {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  margin-top: 26px;
+}
+
+.dive-layer-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 10px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+}
+
+.dive-layer-note {
+  margin-left: auto;
+  letter-spacing: 0.06em;
+}
+
+.dive-layer-ops {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 10px;
+}
+
+.dive-op {
+  padding: 11px 12px;
+  background: var(--ground-raised);
+  /* Depth is a tone step plus one rule plus one inset highlight. Never a glow. */
+  border: 1px solid var(--rule);
+  border-top-color: var(--rule-bright);
+  animation: op-in var(--dur-row) var(--ease-out) both;
+}
+
+@keyframes op-in {
+  from {
+    opacity: 0;
+    /* Never from scale(0): a card that grows out of nothing reads as an effect. */
+    transform: translateY(7px) scale(0.985);
+  }
+}
+
+.dive-op-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dive-op-id {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+}
+
+.dive-op-wing {
+  font-size: 9px;
+  letter-spacing: 0.14em;
+}
+
+.dive-op[data-wing='field'] .dive-op-wing { color: var(--wing-field); }
+.dive-op[data-wing='forensics'] .dive-op-wing { color: var(--wing-forensics); }
+.dive-op[data-wing='semantics'] .dive-op-wing { color: var(--wing-semantics); }
+.dive-op[data-wing='esoteric'] .dive-op-wing { color: var(--wing-esoteric); }
+
+.dive-op[data-wing='field'] { border-left-color: var(--wing-field); }
+.dive-op[data-wing='forensics'] { border-left-color: var(--wing-forensics); }
+.dive-op[data-wing='semantics'] { border-left-color: var(--wing-semantics); }
+.dive-op[data-wing='esoteric'] { border-left-color: var(--wing-esoteric); }
+
+.dive-readings {
+  margin: 9px 0 0;
+  display: grid;
+  gap: 3px;
+  font-size: 10.5px;
+}
+
+.dive-reading {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.dive-reading dt {
+  color: var(--ink-faint);
+}
+
+.dive-reading dd {
+  margin: 0;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.dive-writes {
+  margin: 9px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--rule);
+  list-style: none;
+  display: grid;
+  gap: 4px;
+  font-size: 10px;
+}
+
+.dive-writes li {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.dive-path {
+  color: var(--ink-dim);
+}
+
+.dive-value {
+  color: var(--signal);
+  font-variant-numeric: tabular-nums;
+}
+
+.dive-weight {
+  margin-left: auto;
+  color: var(--ink-faint);
+}
+
+.dive-evidence {
+  margin: 9px 0 0;
+  padding: 8px 0 0;
+  border-top: 1px solid var(--rule);
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.dive-source {
+  display: block;
+  color: var(--wing-field);
+  letter-spacing: 0.08em;
+}
+
+.dive-snippet {
+  display: block;
+  color: var(--ink-dim);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.dive-more {
+  color: var(--ink-faint);
+}
+
+.dive-why {
+  margin: 9px 0 0;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+.dive-op-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 9px;
+  padding-top: 7px;
+  border-top: 1px solid var(--rule);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.dive-layer-out .dive-plate {
+  max-width: 260px;
+  border: 1px solid var(--rule-bright);
+}
+
+.dive-plate-params {
+  margin-top: 12px;
+  max-width: 260px;
+}
+
+.dive-cert {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 7px 13px;
+  border: 1px solid var(--rule);
+  color: var(--ink-dim);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition:
+    border-color var(--dur-tip) var(--ease-out),
+    color var(--dur-tip) var(--ease-out),
+    transform var(--dur-press) var(--ease-out);
+}
+
+.dive-cert:hover {
+  border-color: var(--rule-bright);
+  color: var(--ink);
+}
+
+.dive-cert:active {
+  transform: scale(0.97);
+}
+
+/* The canvas is an image to a screen reader, so the same content exists as text. */
+.sr-list {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.sr-list:focus-within {
+  position: fixed;
+  left: 22px;
+  bottom: 22px;
+  width: min(46ch, 60vw);
+  height: auto;
+  margin: 0;
+  padding: 12px;
+  overflow: auto;
+  max-height: 50vh;
+  clip: auto;
+  clip-path: none;
+  white-space: normal;
+  background: var(--ground-raised);
+  border: 1px solid var(--rule-bright);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dive,
+  .dive-op {
+    animation: none;
+  }
+}

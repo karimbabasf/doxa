@@ -1,159 +1,122 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
-import type { WorkOrder } from '@/lib/types'
+import { useCallback, useEffect, useState } from 'react'
+import { GraphCanvas } from '@/components/graph/GraphCanvas'
+import { DivePanel } from '@/components/graph/DivePanel'
+import type { GraphNode } from './api/graph/route'
 
 /**
- * Intake. One field, because one opinion is the whole input to this factory.
+ * The graph.
  *
- * The limits are checked here and again in the route. The copy on both sides says the
- * same thing, so a person never fixes a problem the server then describes differently.
+ * It opens empty and fills, one opinion at a time, because that is the honest order of
+ * events: each arrival re-runs the nearest neighbour search over everything present, so
+ * edges form and edges break as the population changes. Watching it fill is watching the
+ * embedding space sort itself out, which is the one thing a static screenshot of a
+ * finished graph cannot show.
  */
 
-const MIN_WORDS = 3
-const MAX_CHARS = 500
+/** Gap between arrivals. Slow enough to watch an edge break, quick enough to sit through. */
+const ARRIVAL_MS = 620
 
-const SAMPLES = [
-  'Design reviews are theatre. They exist so that nobody has to be the person who said no.',
-  'Remote work cut San Francisco office attendance by half after 2020, and the city still plans as if it will come back.',
-  "Every good tool starts as somebody's private hack, and the ones that stay private stay good.",
-]
-
-/** The same cleaning the route does, so the counter agrees with the gate. */
-function normalise(raw: string): string {
-  return raw
-    .replace(/[‘’‚‛′]/g, "'")
-    .replace(/[“”„‟″]/g, '"')
-    .replace(/[\u200B-\u200D\uFEFF]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-}
-
-export default function IntakePage() {
-  const [text, setText] = useState('')
-  const [busy, setBusy] = useState(false)
+export default function GraphPage() {
+  const [nodes, setNodes] = useState<GraphNode[]>([])
+  const [admitted, setAdmitted] = useState(0)
+  const [selected, setSelected] = useState<GraphNode | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const clean = useMemo(() => normalise(text), [text])
-  const words = clean ? clean.split(' ').length : 0
-  const tooShort = words < MIN_WORDS
-  const tooLong = clean.length > MAX_CHARS
-  const ready = !tooShort && !tooLong && !busy
-
-  const local = tooLong
-    ? `Cut ${clean.length - MAX_CHARS} characters. The limit is ${MAX_CHARS}.`
-    : tooShort && words > 0
-      ? `An opinion needs at least ${MIN_WORDS} words to assay. This one has ${words}.`
-      : null
-
-  const submit = useCallback(async () => {
-    if (!ready) return
-    setBusy(true)
-    setError(null)
-    try {
-      const res = await fetch('/api/plan', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ opinion: clean }),
+  useEffect(() => {
+    let live = true
+    fetch('/api/graph')
+      .then(async (res) => {
+        const body = await res.json()
+        if (!res.ok) throw new Error(body.error ?? `request failed, ${res.status}`)
+        return body.nodes as GraphNode[]
       })
-      const body = (await res.json()) as WorkOrder & { error?: string }
-      if (!res.ok) {
-        setError(body.error ?? `Intake refused the opinion with status ${res.status}.`)
-        setBusy(false)
-        return
-      }
-      window.location.assign(`/gate/${body.batchId}`)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err))
-      setBusy(false)
+      .then((list) => {
+        if (!live) return
+        setNodes(list)
+        // `?open=<batchId>` lands straight in one node's pipeline. A dive is the part
+        // worth sending someone, and a link that only ever opens the whole graph makes
+        // the sender describe with words what the screen already shows.
+        const wanted = new URLSearchParams(window.location.search).get('open')
+        if (!wanted) return
+        const match = list.find((n) => n.batchId === wanted)
+        if (match) {
+          setAdmitted(list.length)
+          setSelected(match)
+        }
+      })
+      .catch((err: Error) => live && setError(err.message))
+    return () => {
+      live = false
     }
-  }, [clean, ready])
+  }, [])
+
+  useEffect(() => {
+    if (nodes.length === 0 || admitted >= nodes.length) return
+    const reduceMotion =
+      window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
+    if (reduceMotion) {
+      setAdmitted(nodes.length)
+      return
+    }
+    const timer = setTimeout(() => setAdmitted((n) => n + 1), ARRIVAL_MS)
+    return () => clearTimeout(timer)
+  }, [nodes, admitted])
+
+  const onSelect = useCallback((node: GraphNode | null) => setSelected(node), [])
+
+  const filling = nodes.length > 0 && admitted < nodes.length
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-16">
-      <h1 className="text-[15px] tracking-[0.34em] text-ink">DOXA</h1>
-      <p className="prose-sans mt-3 max-w-xl text-ink-dim" style={{ fontSize: '13px' }}>
-        An opinion goes in. A planner agent picks the instruments that suit that exact text and
-        writes down why it picked each one. You read the plan and sign it. The line runs under
-        tracing and strikes one dithered specimen with a certificate of every operation performed.
-      </p>
-
-      <label htmlFor="opinion" className="mt-10 block text-[10px] tracking-[0.16em] text-ink-faint">
-        THE OPINION
-      </label>
-      <textarea
-        id="opinion"
-        value={text}
-        onChange={event => setText(event.target.value)}
-        onKeyDown={event => {
-          if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
-            event.preventDefault()
-            void submit()
-          }
-        }}
-        rows={5}
-        autoFocus
-        spellCheck
-        placeholder="Type the thing you actually believe. Three words at least, 500 characters at most."
-        className="prose-sans mt-2 w-full resize-y border border-rule bg-ground-sunk px-4 py-3 text-ink outline-none focus:border-signal"
-        style={{ fontSize: '15px', lineHeight: 1.55 }}
+    <main className="graph-view" data-diving={selected ? 'yes' : 'no'}>
+      <GraphCanvas
+        nodes={nodes}
+        selectedId={selected?.batchId ?? null}
+        onSelect={onSelect}
+        admitted={admitted}
       />
 
-      <div className="mt-2 flex flex-wrap items-baseline justify-between gap-3 text-[10px]">
-        <span className={tooLong ? 'text-state-fail' : 'text-ink-faint'}>
-          {words} {words === 1 ? 'word' : 'words'}, {clean.length} of {MAX_CHARS} characters
+      <div className="graph-top">
+        <span className="graph-mark">DOXA</span>
+        <span className="graph-count">
+          {admitted} of {nodes.length} opinions
+          {filling ? ', filling' : ''}
         </span>
-        <span className="text-ink-faint">Cmd or Ctrl plus Enter composes the work order.</span>
+        <a className="graph-add" href="/intake">
+          Add an opinion
+        </a>
       </div>
 
-      {(local || error) && (
-        <p className="mt-3 border-l-2 border-state-fail pl-3 text-[12px] text-state-fail">
-          {error ?? local}
+      {error && <p className="graph-error">{error}</p>}
+
+      {nodes.length === 0 && !error && (
+        <p className="graph-empty">
+          No analysed opinions yet. Run one through intake and it lands here.
         </p>
       )}
 
-      <div className="mt-6 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => void submit()}
-          disabled={!ready}
-          className={`border px-5 py-2 text-[11px] tracking-[0.14em] ${
-            ready
-              ? 'cursor-pointer border-signal bg-signal text-ground'
-              : 'cursor-not-allowed border-rule text-ink-faint'
-          }`}
-        >
-          COMPOSE THE WORK ORDER
-        </button>
-        {busy && (
-          <span className="is-live text-[11px] text-state-live">
-            The planner is reading your text and choosing instruments.
-          </span>
-        )}
-      </div>
+      {!selected && admitted > 0 && (
+        <p className="graph-hint">
+          Every node is the specimen its own run struck. Distance is the distance between
+          the opinions. Click one to see the line that made it.
+        </p>
+      )}
 
-      <div className="mt-14 border-t border-rule pt-5">
-        <h2 className="text-[10px] tracking-[0.16em] text-ink-faint">
-          OR TAKE ONE OF THESE. EACH ONE COMPOSES A DIFFERENT LINE.
-        </h2>
-        <ul className="mt-3 flex flex-col gap-2">
-          {SAMPLES.map(sample => (
-            <li key={sample}>
-              <button
-                type="button"
-                onClick={() => {
-                  setText(sample)
-                  setError(null)
-                }}
-                className="hoverable prose-sans w-full border border-rule px-4 py-3 text-left text-ink-dim hover:border-rule-bright hover:text-ink"
-                style={{ fontSize: '12.5px' }}
-              >
-                {sample}
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
+      {selected && (
+        <DivePanel batchId={selected.batchId} onClose={() => setSelected(null)} />
+      )}
+
+      {/* Text equivalent of the canvas, and the keyboard route into a dive. */}
+      <ul className="sr-list" aria-label="Every analysed opinion">
+        {nodes.slice(0, admitted).map((n) => (
+          <li key={n.batchId}>
+            <button onClick={() => setSelected(n)}>
+              {n.batchId}: {n.opinion}
+            </button>
+          </li>
+        ))}
+      </ul>
     </main>
   )
 }
