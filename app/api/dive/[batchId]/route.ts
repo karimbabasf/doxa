@@ -37,6 +37,17 @@ export type DivePayload = {
   totalOps: number
   /** Operators grouped into the layers the floor actually ran them in. */
   layers: DiveOperator[][]
+  /**
+   * Operators the human signed that produced no result.
+   *
+   * The executor fails an operator alone and lets the rest of the run finish, which is
+   * the right call: one dead scrape should not throw away 17 good readings. But it means
+   * a finished specimen can be missing a whole wing, and a screen that only draws what
+   * reported would show that run as complete. A field operator dropping out is exactly
+   * the failure worth seeing, so the gap between signed and reported is carried here and
+   * stated on the page.
+   */
+  notRun: { id: string; wing: Wing }[]
 }
 
 export async function GET(
@@ -123,8 +134,23 @@ export async function GET(
     layers = [ran.map((id) => byId.get(id)).filter((op): op is DiveOperator => !!op)]
   }
 
+  // Signed and enabled, but nothing came back. Read off the work order rather than the
+  // registry, so it names what this run was actually asked to do.
+  const notRun = order.operators
+    .filter((o) => o.enabled && !byId.has(o.id))
+    .map((o) => {
+      let wing: Wing = 'forensics'
+      try {
+        wing = getOperator(o.id).wing
+      } catch {
+        // An operator no longer in the registry still belongs in the count.
+      }
+      return { id: o.id, wing }
+    })
+
   const payload: DivePayload = {
     batchId: batch.id,
+    notRun,
     opinion: batch.opinion,
     createdAt: batch.created_at,
     signedAt: orderRow.signed_at,

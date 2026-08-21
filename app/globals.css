@@ -656,3 +656,16 @@ button:active,
     animation: none;
   }
 }
+
+/* A run that finished with an operator missing says so, at the top, in the alert
+   colour the floor uses for a failure. Silence here would misreport the specimen. */
+.dive-missing {
+  margin: 12px 0 0;
+  padding: 8px 10px;
+  border: 1px solid var(--state-fail);
+  border-left-width: 2px;
+  font-size: 10.5px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+  text-wrap: pretty;
+}

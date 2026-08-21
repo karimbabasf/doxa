@@ -173,6 +173,17 @@ export function DivePanel({
               <span>{payload.layers.length} layers</span>
             </div>
             <blockquote className="dive-opinion">{payload.opinion}</blockquote>
+
+            {/* Stated at the top, not buried. A specimen struck with a wing missing is
+                still a specimen, and the only way to know is to be told. */}
+            {payload.notRun.length > 0 && (
+              <p className="dive-missing">
+                {payload.notRun.length === 1 ? 'One operator was' : `${payload.notRun.length} operators were`}{' '}
+                signed and returned nothing:{' '}
+                {payload.notRun.map((o) => o.id).join(', ')}. The specimen below was struck
+                without {payload.notRun.length === 1 ? 'it' : 'them'}.
+              </p>
+            )}
             {payload.plannerNotes && (
               <details className="dive-planner">
                 <summary>Why the planner composed this line</summary>
