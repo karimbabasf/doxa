@@ -6,7 +6,7 @@ import { register, clearRegistry, allOperators } from '../operators/registry'
 import type { Operator, Wing } from '../types'
 
 /**
- * Nothing here reaches NEAR AI. There is no key in this environment and there
+ * Nothing here reaches the model provider. There is no key in this environment and there
  * will not be one, so the model is a stub and every assertion is about what the
  * planner does with an answer, never about the answer itself.
  */
@@ -131,7 +131,7 @@ describe('composePlan', () => {
   })
 
   it('falls back rather than throwing when the model call itself fails twice', async () => {
-    model.mockRejectedValue(new Error('NEAR AI /chat/completions failed with 503: upstream'))
+    model.mockRejectedValue(new Error('Model API /chat/completions failed with 503: upstream'))
     const order = await composePlan(FACTUAL, 'batch-7')
 
     expect(ids(order)).toHaveLength(SPECS.length)

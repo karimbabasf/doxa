@@ -35,18 +35,18 @@ Environment, all in `.env.local`:
 
 | Variable | Needed for | Notes |
 |---|---|---|
-| `NEAR_AI_BASE_URL` | every model call | `https://cloud-api.near.ai/v1` |
-| `NEAR_AI_API_KEY` | every model call | Read as a pair with the base URL. The app refuses to start with only one of them. |
-| `NEAR_AI_MODEL` | the planner, CLAIM-EX, STANCE, reconciliation | `openai/gpt-oss-120b` |
-| `NEAR_AI_EMBED_MODEL` | EMBED, TOPIC-REL, CONTRA-CHK | `Qwen/Qwen3-Embedding-0.6B` |
-| `BRIGHTDATA_API_TOKEN` | the field wing | |
+| `LLM_BASE_URL` | every model call | `https://api.openai.com/v1`. Any OpenAI-compatible provider works. |
+| `LLM_API_KEY` | every model call | Read as a pair with the base URL. The app refuses to start with only one of them. **This is the only variable you must set.** |
+| `LLM_MODEL` | the planner, CLAIM-EX, STANCE, reconciliation | Defaults to `gpt-5.2`. |
+| `LLM_EMBED_MODEL` | EMBED, TOPIC-REL, CONTRA-CHK | Defaults to `text-embedding-3-small`. |
+| `BRIGHTDATA_PRIOR_ART_ID`, `BRIGHTDATA_CORROBORATE_ID` | the field wing | Optional. Both default to our collectors. The CLI holds the credentials, so run `bdata login` once instead of setting a token here. |
 | `SIGNOZ_ENDPOINT`, `SIGNOZ_INGESTION_KEY` | tracing | Optional. Tracing degrades to a no-op when absent; it never blocks a run. |
 
 Nothing in this codebase reads `OPENAI_API_KEY`, `OPENAI_BASE_URL` or `ANTHROPIC_API_KEY`. That is
 deliberate and tested: a stray key in the shell must never silently authenticate against the wrong
 provider.
 
-One step after adding a NEAR AI key, once:
+One step after adding the key, once:
 
 ```bash
 pnpm dlx tsx scripts/build-topic-anchors.ts   # fills the 16 topic anchor vectors in data/topics.json
@@ -58,9 +58,9 @@ that script rather than scoring against zeros, because a confident wrong topic i
 ## How to test it
 
 ```bash
-pnpm test          # vitest, 445 tests across 43 files
+pnpm test          # vitest, 522 tests across 49 files
 npx tsc --noEmit   # clean
-pnpm build         # 9 routes
+pnpm build         # 13 routes
 ```
 
 Every forensics and esoteric operator is a pure function, so its tests assert exact values on known

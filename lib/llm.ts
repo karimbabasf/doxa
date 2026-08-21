@@ -1,15 +1,15 @@
 import { getEnv } from './env'
 
 /**
- * The one client every model call in this codebase goes through. It is
- * OpenAI-compatible on purpose, because NEAR AI Cloud speaks that dialect, but
- * it reads only the NEAR AI credential pair. See lib/env.ts for why that matters.
+ * The one client every model call in this codebase goes through. It speaks the
+ * OpenAI dialect, which both OpenAI and NEAR AI Cloud serve, and it reads only
+ * the LLM_ credential pair. See lib/env.ts for why that matters.
  */
 
-/** Used when NEAR_AI_MODEL is unset or empty. */
-const DEFAULT_CHAT_MODEL = 'openai/gpt-oss-120b'
-/** Used when NEAR_AI_EMBED_MODEL is unset or empty. The one embedding model NEAR AI serves. */
-const DEFAULT_EMBED_MODEL = 'Qwen/Qwen3-Embedding-0.6B'
+/** Used when LLM_MODEL is unset or empty. */
+const DEFAULT_CHAT_MODEL = 'gpt-5.2'
+/** Used when LLM_EMBED_MODEL is unset or empty. */
+const DEFAULT_EMBED_MODEL = 'text-embedding-3-small'
 /** One retry, one wait. A second 5xx means the provider is down, not busy. */
 const RETRY_WAIT_MS = 400
 
@@ -48,7 +48,7 @@ async function postJson(path: string, body: unknown): Promise<unknown> {
     if (!retryable) break
     await sleep(RETRY_WAIT_MS)
   }
-  throw new Error(`NEAR AI ${path} failed with ${lastStatus}: ${lastBody}`)
+  throw new Error(`Model API ${path} failed with ${lastStatus}: ${lastBody}`)
 }
 
 /**
@@ -57,7 +57,7 @@ async function postJson(path: string, body: unknown): Promise<unknown> {
  */
 export async function chatJson<T>(opts: ChatJsonOpts): Promise<T> {
   const data = (await postJson('/chat/completions', {
-    model: opts.model || process.env.NEAR_AI_MODEL || DEFAULT_CHAT_MODEL,
+    model: opts.model || process.env.LLM_MODEL || DEFAULT_CHAT_MODEL,
     temperature: 0,
     response_format: {
       type: 'json_schema',
@@ -83,12 +83,12 @@ export async function chatJson<T>(opts: ChatJsonOpts): Promise<T> {
 /** One embedding call for a batch of texts. Vectors come back in input order. */
 export async function embed(texts: string[], model?: string): Promise<number[][]> {
   const data = (await postJson('/embeddings', {
-    model: model || process.env.NEAR_AI_EMBED_MODEL || DEFAULT_EMBED_MODEL,
+    model: model || process.env.LLM_EMBED_MODEL || DEFAULT_EMBED_MODEL,
     input: texts,
   })) as { data?: { embedding: number[]; index?: number }[] }
 
   const rows = data?.data
-  if (!Array.isArray(rows)) throw new Error('NEAR AI /embeddings returned no data array')
+  if (!Array.isArray(rows)) throw new Error('Model API /embeddings returned no data array')
   return [...rows]
     .sort((a, b) => (a.index ?? 0) - (b.index ?? 0))
     .map(row => row.embedding)

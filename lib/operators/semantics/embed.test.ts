@@ -102,7 +102,7 @@ describe('EMBED', () => {
   })
 
   it('rethrows when the embedding call fails', async () => {
-    mockEmbed.mockRejectedValue(new Error('NEAR AI /embeddings failed with 503: busy'))
+    mockEmbed.mockRejectedValue(new Error('Model API /embeddings failed with 503: busy'))
     await expect(EMBED.run(ctx('Anything.'))).rejects.toThrow(/503/)
   })
 })

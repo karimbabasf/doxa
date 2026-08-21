@@ -135,7 +135,7 @@ describe('CONTRA-CHK', () => {
   })
 
   it('rethrows when the embedding call fails', async () => {
-    mockEmbed.mockRejectedValue(new Error('NEAR AI /embeddings failed with 503: busy'))
+    mockEmbed.mockRejectedValue(new Error('Model API /embeddings failed with 503: busy'))
     await expect(CONTRA_CHK.run(ctx('Cats rule, because dogs drool.'))).rejects.toThrow(/503/)
   })
 })

@@ -29,14 +29,14 @@ const DECIMALS = 6
 
 /**
  * tsx does not load .env.local, and this script is the one place outside Next.js
- * that needs the credential pair. Only NEAR_AI_ keys are copied across, so a stray
+ * that needs the credential pair. Only LLM_ keys are copied across, so a stray
  * OPENAI_API_KEY sitting in the environment can never reach lib/llm.ts.
  */
-function loadNearAiEnv(): void {
+function loadLlmEnv(): void {
   const envPath = path.resolve(ROOT, '.env.local')
   if (!existsSync(envPath)) return
   for (const line of readFileSync(envPath, 'utf8').split('\n')) {
-    const match = line.match(/^\s*(NEAR_AI_[A-Z0-9_]+)\s*=\s*(.*)\s*$/)
+    const match = line.match(/^\s*(LLM_[A-Z0-9_]+)\s*=\s*(.*)\s*$/)
     if (!match) continue
     const key = match[1]
     const value = match[2].replace(/^["']|["']$/g, '')
@@ -48,7 +48,7 @@ async function main(): Promise<void> {
   if (!existsSync(TOPICS_PATH)) {
     throw new Error(`Cannot find ${TOPICS_PATH}. Run this from the repo root.`)
   }
-  loadNearAiEnv()
+  loadLlmEnv()
 
   const topics = JSON.parse(readFileSync(TOPICS_PATH, 'utf8')) as Topic[]
   const flat: string[] = []

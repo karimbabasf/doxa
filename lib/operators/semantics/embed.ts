@@ -68,7 +68,7 @@ export const EMBED: Operator = {
   async run(ctx) {
     const [vector] = await embedTexts([ctx.opinion])
     if (!vector || vector.length === 0) {
-      throw new Error('NEAR AI returned no embedding vector for this opinion.')
+      throw new Error('The model API returned no embedding vector for this opinion.')
     }
     let sum = 0
     for (const value of vector) sum += value * value

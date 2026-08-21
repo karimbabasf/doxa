@@ -103,7 +103,7 @@ describe('STANCE', () => {
   })
 
   it('rethrows when the model call fails', async () => {
-    mockChat.mockRejectedValue(new Error('NEAR AI /chat/completions failed with 503: busy'))
+    mockChat.mockRejectedValue(new Error('Model API /chat/completions failed with 503: busy'))
     await expect(STANCE.run(ctx())).rejects.toThrow(/503/)
   })
 })

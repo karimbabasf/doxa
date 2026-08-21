@@ -52,7 +52,7 @@ describe('CLAIM-EX', () => {
   })
 
   it('rethrows when the model call fails, rather than passing a blank claim downstream', async () => {
-    mockChat.mockRejectedValue(new Error('NEAR AI /chat/completions failed with 503: busy'))
+    mockChat.mockRejectedValue(new Error('Model API /chat/completions failed with 503: busy'))
     await expect(CLAIM_EX.run(ctx('Anything at all.'))).rejects.toThrow(/503/)
   })
 })

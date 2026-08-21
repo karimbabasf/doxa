@@ -3,7 +3,7 @@ import { chatJson, embed } from './llm'
 
 /**
  * Nothing here talks to a real endpoint. Every case stubs fetch, because the
- * NEAR AI key is not in this environment and a test that needs one is a test
+ * provider key is not in this environment and a test that needs one is a test
  * that gets skipped on the day it matters.
  */
 
@@ -28,10 +28,10 @@ const httpFail = (status: number, body: string) => ({
 })
 
 beforeEach(() => {
-  process.env.NEAR_AI_BASE_URL = BASE
-  process.env.NEAR_AI_API_KEY = KEY
-  process.env.NEAR_AI_MODEL = 'openai/gpt-oss-120b'
-  process.env.NEAR_AI_EMBED_MODEL = 'Qwen/Qwen3-Embedding-0.6B'
+  process.env.LLM_BASE_URL = BASE
+  process.env.LLM_API_KEY = KEY
+  process.env.LLM_MODEL = 'openai/gpt-oss-120b'
+  process.env.LLM_EMBED_MODEL = 'Qwen/Qwen3-Embedding-0.6B'
   // The stray key the shell carries. It must never reach a request.
   process.env.OPENAI_API_KEY = SENTINEL
   process.env.OPENAI_BASE_URL = SENTINEL
@@ -52,7 +52,7 @@ const schema = {
 }
 
 describe('chatJson', () => {
-  it('posts to the chat endpoint with the NEAR AI bearer token', async () => {
+  it('posts to the chat endpoint with the configured bearer token', async () => {
     fetchMock.mockResolvedValueOnce(chatOk('{"verdict":"fine"}'))
     await chatJson({ system: 's', user: 'u', schema })
 
