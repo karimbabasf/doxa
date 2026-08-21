@@ -11,6 +11,16 @@ plus a certificate showing every operation performed.
 The pipeline is composed, not hardcoded. Two people type two opinions and get two visibly different
 factory lines, because the planner picks and orders operators to suit the text in front of it.
 
+## Where this lives
+
+This build is the branch `karimbabasf/doxa` in the shared repo `mfinikov/zero-hackathon`. The repo's
+default branch, `mfinikov/aidline-disaster-aid-map`, holds the earlier Discourse prototype. The two
+branches have unrelated histories, so GitHub cannot compare or merge them. Read them as two separate
+projects that share one repo.
+
+The same history is public at `github.com/karimbabasf/doxa`, because Scrape-Verse requires a public
+repo. Both remotes carry the same commits.
+
 ## How to run it
 
 Requires Node 20 or newer and pnpm.
