@@ -1,7 +1,8 @@
 import { chatJson } from '../llm'
 import { allOperators, getOperator, resolveDeps } from '../operators/registry'
 import { ALL_RENDER_PATHS, type Operator, type RenderPath, type WorkOrder } from '../types'
-import { layerOps, validateWorkOrder } from './validate'
+import { layer } from '../executor/topo'
+import { validateWorkOrder } from './validate'
 
 /**
  * The planner composes one pipeline for one opinion. It is the reason two people
@@ -179,7 +180,7 @@ export function buildUserPrompt(opinion: string, rejection?: string): string {
 /** Layers, or the set untouched if it cannot be layered. Validation reports the why. */
 function safeLayers(ops: Operator[]): Operator[][] {
   try {
-    return layerOps(ops)
+    return layer(ops)
   } catch {
     return ops.map(op => [op])
   }

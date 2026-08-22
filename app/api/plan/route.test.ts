@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { clearRegistry, register } from '@/lib/operators/registry'
-import { layerOps } from '@/lib/planner/validate'
+import { layer } from '@/lib/executor/topo'
 import type { Operator, WorkOrder } from '@/lib/types'
 
 /**
@@ -48,7 +48,7 @@ const FIXTURES = [
 ]
 
 function orderFor(opinion: string, batchId: string): WorkOrder {
-  const flat = layerOps(FIXTURES).flat()
+  const flat = layer(FIXTURES).flat()
   return {
     batchId,
     opinion,
