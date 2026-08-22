@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server'
 import { gateDb } from '../../plan/db'
 import { getOperator } from '@/lib/operators'
-import { layerOps } from '@/lib/planner/validate'
+import { layer } from '@/lib/executor/topo'
 import type { Contribution, Evidence, OperatorResult, RenderParams, WorkOrder, Wing } from '@/lib/types'
 
 /**
  * One opinion's whole pipeline, laid out for the dive.
  *
  * The dive's claim is that this exact node was produced by this exact run, so every field
- * below is read back from what the run wrote. The layering is the planner's own `layerOps`
+ * below is read back from what the run wrote. The layering is the executor's own `layer`
  * rather than a second walker written for the screen: two DAG builders would eventually
  * disagree, and the one on screen would be the one lying.
  */
@@ -126,8 +126,8 @@ export async function GET(
   const ran = [...byId.keys()]
   let layers: DiveOperator[][]
   try {
-    layers = layerOps(ran.map(getOperator)).map((layer) =>
-      layer.map((op) => byId.get(op.id)).filter((op): op is DiveOperator => !!op),
+    layers = layer(ran.map(getOperator)).map((row) =>
+      row.map((op) => byId.get(op.id)).filter((op): op is DiveOperator => !!op),
     )
   } catch {
     // Registry drift beats the walker. One layer still tells the truth about what ran.

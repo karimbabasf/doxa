@@ -53,16 +53,19 @@ type Loaded = {
 }
 
 /**
- * The store the run wrote to. The default matches `app/api/plan/db.ts` and
- * `lib/demo/state.ts` so the whole app points at one file. Both env names are read
- * because `app/api/run/route.ts` currently uses the shorter one.
+ * The store the run wrote to. `DOXA_DB_PATH` and the `data/doxa.db` default match
+ * `app/api/plan/db.ts` and `lib/demo/state.ts`, so the whole app points at one file.
  */
 function databasePath(): string {
-  const configured = process.env.DOXA_DB_PATH ?? process.env.DOXA_DB ?? 'data/doxa.db'
+  const configured = process.env.DOXA_DB_PATH ?? 'data/doxa.db'
   return isAbsolute(configured) ? configured : join(process.cwd(), configured)
 }
 
-/** `batches.verdict` holds the reconciliation paragraph. It has no accessor in lib/db.ts yet. */
+/**
+ * `batches.verdict` holds the reconciliation paragraph. Read here rather than through
+ * `setBatchVerdict` in lib/db.ts, which is the write half of the same seam: no stage
+ * calls it yet, so the section below renders its empty state on every batch today.
+ */
 function readReconciliation(db: Db, batchId: string): string | null {
   const row = db.prepare('SELECT verdict FROM batches WHERE id = ?').get(batchId) as
     | { verdict: string | null }

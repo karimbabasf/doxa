@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { validateWorkOrder, layerOps } from './validate'
+import { validateWorkOrder } from './validate'
+import { layer } from '../executor/topo'
 import { register, clearRegistry, getOperator } from '../operators/registry'
 import type { Operator, WorkOrder } from '../types'
 
@@ -93,15 +94,15 @@ describe('validateWorkOrder', () => {
   })
 })
 
-describe('layerOps', () => {
+describe('layer, reached through the planner\'s own registry', () => {
   it('groups independent operators into one layer and dependents into later ones', () => {
     const ops = ['TOKENIZE', 'HEDGE-7', 'CLAIM-EX', 'CORROBORATE'].map(getOperator)
-    expect(layerOps(ops).map(l => l.map(o => o.id))).toEqual([
+    expect(layer(ops).map(l => l.map(o => o.id))).toEqual([
       ['TOKENIZE'], ['CLAIM-EX', 'HEDGE-7'], ['CORROBORATE'],
     ])
   })
 
   it('throws naming the operators stuck in a cycle', () => {
-    expect(() => layerOps(['LOOP-A', 'LOOP-B'].map(getOperator))).toThrow(/cycle/i)
+    expect(() => layer(['LOOP-A', 'LOOP-B'].map(getOperator))).toThrow(/cycle/i)
   })
 })

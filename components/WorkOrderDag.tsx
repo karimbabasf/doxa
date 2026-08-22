@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { layerOps } from '@/lib/planner/validate'
+import { layer } from '@/lib/executor/topo'
 import type { Operator } from '@/lib/types'
 import OperatorCard, { listOf, type CardState, type GateOperator } from './OperatorCard'
 
@@ -123,8 +123,8 @@ export default function WorkOrderDag({ batchId, operators, signedAt, onSign }: P
 
   const layered = useMemo(() => {
     try {
-      // layerOps reads id and needs only, so metadata without a run function is enough.
-      return { layers: layerOps(operators as unknown as Operator[]) as unknown as GateOperator[][], fault: null }
+      // layer reads id and needs only, so metadata without a run function is enough.
+      return { layers: layer(operators as unknown as Operator[]) as unknown as GateOperator[][], fault: null }
     } catch (err) {
       return { layers: [operators], fault: message(err) }
     }
