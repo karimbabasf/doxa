@@ -27,6 +27,13 @@ export type CheckOpts = {
 
 export type RepairOpts = CheckOpts & {
   /**
+   * Route every scrape in this repair through the CLI's synchronous endpoint. Only for a
+   * collector whose whole result fits inside that 25 to 50 second cap. See
+   * `triggerCollector`: a big scrape asked to run sync returns nothing, not late rows.
+   */
+  sync?: boolean
+
+  /**
    * Reshape a collector's raw output into one row per record before validating. PRIOR-ART
    * returns one row per page with the quotations nested inside it; CORROBORATE returns one
    * flat row per topic. The hook runs on every attempt, the verify scrape included, so a
@@ -164,14 +171,15 @@ export async function fetchWithRepair(
   opts?: RepairOpts,
 ): Promise<{ rows: Row[]; repaired: boolean; healDiff?: string }> {
   const shape = opts?.flatten ?? ((rows: unknown[]) => rows)
+  const mode = { sync: opts?.sync === true }
 
-  const first = checkRows(shape(await triggerCollector(collectorId, input)), fields, opts)
+  const first = checkRows(shape(await triggerCollector(collectorId, input, mode)), fields, opts)
   if (first.ok) return { rows: first.rows, repaired: false }
 
   // One repair attempt, told exactly what failed. There is never a second.
   const healDiff = await healCollector(collectorId, first.reason)
 
-  const retry = checkRows(shape(await triggerCollector(collectorId, input)), fields, opts)
+  const retry = checkRows(shape(await triggerCollector(collectorId, input, mode)), fields, opts)
   if (!retry.ok) {
     throw new Error(
       `Scraper ${collectorId} still failing after one repair: ${retry.reason}. A human needs to look at this.`,
@@ -179,7 +187,7 @@ export async function fetchWithRepair(
   }
 
   // The heal is not believed until it holds on an input this run has not scraped.
-  const proof = checkRows(shape(await triggerCollector(collectorId, verifyInput)), fields, opts)
+  const proof = checkRows(shape(await triggerCollector(collectorId, verifyInput, mode)), fields, opts)
   if (!proof.ok) {
     throw new Error(
       `Scraper ${collectorId} passed its own input after repair but failed on ${JSON.stringify(verifyInput)}: ` +

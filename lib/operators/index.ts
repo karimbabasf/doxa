@@ -13,6 +13,11 @@
  * registry cannot be unit tested against a fixture set.
  *
  * Four wings: forensics 9, semantics 4, esoteric 6, field 2.
+ *
+ * DEMO-SHOP is the exception and is imported for its side effect alone. It registers
+ * itself only under DOXA_DEMO_SHOP=1, so it cannot join `ALL_OPERATORS`: that array is
+ * the fixed catalogue the registration tests check, and a member that is sometimes in
+ * the registry and sometimes not would make those tests depend on the environment.
  */
 import { TOKENIZE } from './forensics/tokenize'
 import { HEDGE_7 } from './forensics/hedge'
@@ -38,6 +43,7 @@ import { COMPRESS } from './esoteric/compress'
 
 import { CORROBORATE } from './field/corroborate'
 import { PRIOR_ART } from './field/priorArt'
+import './field/demoShop'
 
 export const ALL_OPERATORS = [
   TOKENIZE,
@@ -86,5 +92,7 @@ export {
   CORROBORATE,
   PRIOR_ART,
 }
+
+export { DEMO_SHOP } from './field/demoShop'
 
 export * from './registry'

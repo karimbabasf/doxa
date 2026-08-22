@@ -17,6 +17,22 @@ const run = promisify(execFile)
 /** Collector ids, pinned in CLAUDE.md. Env wins so a rebuilt collector needs no code change. */
 export const CORROBORATE_COLLECTOR = process.env.BRIGHTDATA_CORROBORATE_ID || 'c_mt12stqk2d78cqkmn2'
 export const PRIOR_ART_COLLECTOR = process.env.BRIGHTDATA_PRIOR_ART_ID || 'c_mt12spi4173gff7wai'
+export const DEMO_SHOP_COLLECTOR = process.env.BRIGHTDATA_DEMO_SHOP_ID || 'c_pending'
+
+/**
+ * The demo shop is served by this app, so its public address is whatever tunnel is up.
+ * A quick tunnel gets a new hostname on every start, which is why there is no default:
+ * a stale default would scrape a dead host and blame the collector for it.
+ */
+export function demoShopUrl(set: string): string {
+  const base = (process.env.DOXA_DEMO_SHOP_BASE || '').trim().replace(/\/+$/, '')
+  if (!base) {
+    throw new Error(
+      'DEMO-SHOP needs DOXA_DEMO_SHOP_BASE, the public base URL of this app. Start the tunnel and set it.',
+    )
+  }
+  return `${base}/demo/shop/${set}`
+}
 
 /** A scrape of 250 rows is normal and a cold collector is slow, so the default is generous. */
 const DEFAULT_TIMEOUT_MS = 180_000
@@ -96,12 +112,23 @@ function targetOf(input: Record<string, string>, collectorId: string): string {
   )
 }
 
-/** Run a pinned collector against one input and hand back its rows, unvalidated. */
+/**
+ * Run a pinned collector against one input and hand back its rows, unvalidated.
+ *
+ * `sync` routes through the CLI's synchronous endpoint, which answers inside its own
+ * 25 to 50 second cap instead of falling back to batch polling. That is the difference
+ * between a repair beat of about a minute and one of four to six, so the demo collector
+ * asks for it. The two web collectors must not: a 250 row scrape does not fit the cap,
+ * and a sync call that overruns it returns nothing rather than late rows.
+ */
 export async function triggerCollector(
   collectorId: string,
   input: Record<string, string>,
+  opts?: { sync?: boolean },
 ): Promise<unknown[]> {
-  const stdout = await bdata(['scraper', 'run', collectorId, targetOf(input, collectorId), '--pretty'])
+  const args = ['scraper', 'run', collectorId, targetOf(input, collectorId), '--pretty']
+  if (opts?.sync) args.push('--sync')
+  const stdout = await bdata(args)
   return parseRows(stdout, collectorId)
 }
 

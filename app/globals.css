@@ -669,3 +669,115 @@ button:active,
   color: var(--ink-dim);
   text-wrap: pretty;
 }
+
+/* ---------------------------------------------------------------------------
+   The roll of sample opinions under the intake field.
+
+   One track, the list on it twice, moved by half its own height forever. Half is
+   exactly one copy, so the loop point is a row boundary no matter what the rows
+   measure, and no JavaScript has to know a pixel height.
+   --------------------------------------------------------------------------- */
+
+.suggest {
+  --suggest-row: 34px;
+  position: relative;
+  height: calc(var(--suggest-row) * 3);
+  overflow: hidden;
+  /* Rows dissolve at the edges. A hard cut would read as a clipped list. */
+  mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+}
+
+.suggest-track {
+  animation: suggest-roll var(--suggest-dur, 30s) linear infinite;
+  will-change: transform;
+}
+
+@keyframes suggest-roll {
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+/*
+ * Stop for a pointer and stop for the keyboard. Clicking a line that is still moving
+ * is a coin toss, and a suggestion nobody can hit is decoration.
+ */
+.suggest:hover .suggest-track,
+.suggest:focus-within .suggest-track {
+  animation-play-state: paused;
+}
+
+.suggest-row {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: var(--suggest-row);
+  padding: 0 0 0 22px;
+  border: 0;
+  background: none;
+  font-family: var(--font-sans-stack);
+  font-size: 12.5px;
+  line-height: var(--suggest-row);
+  text-align: left;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  transition: color var(--dur-tip) var(--ease-out);
+}
+
+/* The tick draws itself out of the left gutter. A hairline, never a glow. */
+.suggest-row::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 0;
+  height: 1px;
+  background: var(--signal);
+  transition: width var(--dur-tip) var(--ease-out);
+}
+
+.suggest-row:hover,
+.suggest-row:focus-visible {
+  color: var(--ink);
+  outline: none;
+}
+
+.suggest-row:hover::before,
+.suggest-row:focus-visible::before {
+  width: 14px;
+}
+
+/* The press scale from the base sheet would shift a line mid roll. Not here. */
+.suggest-row:active {
+  transform: none;
+  color: var(--signal);
+}
+
+/*
+ * Reduced motion gets a list, not a frozen one. The global rule collapses every
+ * animation to 0.01ms, which on a roll means it jumps to the seam and stops there
+ * with a row cut in half. So the roll is switched off outright and the window
+ * becomes a plain scrollable column of the first copy.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .suggest {
+    height: auto;
+    max-height: calc(var(--suggest-row) * 5);
+    overflow-y: auto;
+    mask-image: none;
+    -webkit-mask-image: none;
+  }
+
+  .suggest-track {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .suggest-dup {
+    display: none;
+  }
+}
