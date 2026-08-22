@@ -44,7 +44,7 @@ the same field names in the `bdata scraper create` description.
 | Field | Selector | Notes |
 |---|---|---|
 | `name` | `.product .name` | |
-| `price` | `.product .price` | **This is the one that breaks.** The break button renames it to `.cost`. Nothing else changes: same text, same layout, same 200. |
+| `price` | `.product .price` | **This is the one that breaks.** `POST /api/demo/break` renames it to `.cost`. Nothing else changes: same text, same layout, same 200. |
 | `sku` | `.product .sku` | |
 | `stock` | `.product .stock` | |
 

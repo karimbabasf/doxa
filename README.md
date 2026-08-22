@@ -185,8 +185,9 @@ simply wrong. The repair is "you misunderstood the shape of this page". Healers 
 We tried the hard kind first, which is the whole explanation of what happened above. So the on-camera
 break is always a renamed class. `app/demo/shop/[set]` is a shop page we own, holding structured
 product records across three sets with different products, so the verify scrape always has an
-untouched URL to reach for. The break button renames `.price` to `.cost`. The page still returns 200
-and still looks correct to a human, which is how this fails in the wild.
+untouched URL to reach for. `POST /api/demo/break` renames `.price` to `.cost`, and `DELETE` puts it
+back. The page still returns 200 and still looks correct to a human, which is how this fails in the
+wild.
 
 ## Honest notes
 
