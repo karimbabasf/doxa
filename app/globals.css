@@ -803,3 +803,376 @@ button:active,
     display: none;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   The gate, as the room reads it.
+
+   Four steps left to right, tool titles only, one reason strip that never moves.
+   The detailed graph still lives at ?detail=1 and keeps its own styles above.
+
+   Two rules the layout enforces: nothing scrolls, and clicking a tool never
+   changes the size of anything. A screen that reflows under a pointer reads as
+   broken however correct it is, and a demo that scrolls loses its place.
+   --------------------------------------------------------------------------- */
+
+.gate {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.gate-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: baseline;
+  gap: 20px;
+  padding: 14px 26px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.gate-mark {
+  font-size: 14px;
+  letter-spacing: 0.34em;
+  color: var(--ink);
+}
+
+.gate-what {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--signal);
+}
+
+.gate-batch {
+  margin-left: auto;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--ink-faint);
+}
+
+.gate-batch b {
+  color: var(--ink-dim);
+  font-weight: 400;
+}
+
+/* The sentence and the line centre as one block, so the slack sits above and
+   below the whole thing rather than pooling in one hole inside it. */
+.gate-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 0 26px;
+}
+
+.gate-cap {
+  flex: 0 0 auto;
+  padding-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+}
+
+.gate-said {
+  flex: 0 0 auto;
+  padding-bottom: 30px;
+}
+
+.gate-said blockquote {
+  margin: 9px 0 0;
+  padding-left: 14px;
+  border-left: 2px solid var(--signal);
+  font-family: var(--font-sans-stack);
+  font-size: 19px;
+  line-height: 1.4;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.gate-line {
+  flex: 0 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.gate-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 22px 20px 20px;
+  border: 1px solid var(--rule);
+  background: var(--ground-raised);
+}
+
+/* The steps butt together and the arrow sits in the seam, so the row reads as
+   one line rather than four unrelated cards. */
+.gate-step + .gate-step {
+  border-left: 0;
+}
+
+.gate-step + .gate-step::before {
+  content: '';
+  position: absolute;
+  left: -5px;
+  top: 50%;
+  width: 9px;
+  height: 9px;
+  margin-top: -5px;
+  border-top: 1px solid var(--rule-bright);
+  border-right: 1px solid var(--rule-bright);
+  transform: rotate(45deg);
+  background: var(--ground);
+}
+
+/* The web step is the one the room is here to see: the only colour on the
+   screen, and the only badge. */
+.gate-step.is-web {
+  border-color: var(--signal);
+  background: color-mix(in srgb, var(--signal) 7%, var(--ground-raised));
+}
+
+.gate-step.is-web + .gate-step::before {
+  border-color: var(--signal);
+}
+
+.gate-step-n {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--rule-bright);
+}
+
+.gate-step.is-web .gate-step-n {
+  color: var(--signal);
+}
+
+.gate-step h2 {
+  margin: 10px 0 0;
+  font-family: var(--font-sans-stack);
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.gate-step p {
+  margin: 10px 0 0;
+  font-family: var(--font-sans-stack);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+.gate-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  align-self: flex-start;
+  margin-top: 11px;
+  padding: 4px 9px;
+  border: 1px solid var(--signal);
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--signal);
+}
+
+.gate-dot {
+  width: 5px;
+  height: 5px;
+  background: var(--signal);
+  animation: doxa-breathe 1.4s ease-in-out infinite;
+}
+
+.gate-tools {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-content: flex-start;
+  overflow: hidden;
+}
+
+.gate-tool,
+.gate-more {
+  padding: 3px 8px;
+  border: 1px solid var(--rule-bright);
+  background: none;
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.07em;
+  color: var(--ink-faint);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--dur-tip) var(--ease-out),
+    border-color var(--dur-tip) var(--ease-out),
+    background-color var(--dur-tip) var(--ease-out);
+}
+
+.gate-more {
+  border-style: dashed;
+}
+
+.gate-tool:hover,
+.gate-more:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+.gate-tool[aria-pressed='true'] {
+  color: var(--ground);
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.gate-step.is-web .gate-tool {
+  border-color: color-mix(in srgb, var(--signal) 55%, var(--rule));
+  color: var(--ink-dim);
+}
+
+.gate-step.is-web .gate-tool:hover {
+  color: var(--ink);
+  border-color: var(--signal);
+}
+
+.gate-step.is-web .gate-tool[aria-pressed='true'] {
+  background: var(--signal);
+  border-color: var(--signal);
+  color: var(--ground);
+}
+
+/* A tool the planner refused stays on the screen, struck through. A plan that
+   shows what it turned down is more convincing than one that hides it. */
+.gate-tool.is-off {
+  opacity: 0.4;
+  text-decoration: line-through;
+}
+
+/* The press scale from the base sheet would nudge a chip inside a wrapped row
+   and shuffle the ones after it. */
+.gate-tool:active,
+.gate-more:active {
+  transform: none;
+}
+
+.gate-none {
+  font-family: var(--font-sans-stack);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+/* One fixed row. The reason lands here rather than inside a card, so no click
+   can ever change the height of anything. */
+.gate-why {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  height: 52px;
+  margin-top: 14px;
+  padding: 0 16px;
+  border: 1px solid var(--rule);
+  background: var(--ground-sunk);
+}
+
+.gate-why-k {
+  flex: 0 0 auto;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--signal);
+}
+
+.gate-why.is-idle .gate-why-k {
+  color: var(--ink-faint);
+}
+
+.gate-why-v {
+  font-family: var(--font-sans-stack);
+  font-size: 13px;
+  color: var(--ink-dim);
+  text-wrap: pretty;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.gate-foot {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  padding: 16px 26px;
+  border-top: 1px solid var(--rule);
+}
+
+.gate-sign {
+  padding: 11px 22px;
+  border: 1px solid var(--signal);
+  background: var(--signal);
+  color: var(--ground);
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform var(--dur-press) var(--ease-out);
+}
+
+.gate-sign:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.gate-drop {
+  padding: 11px 18px;
+  border: 1px solid var(--rule);
+  color: var(--ink-faint);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+  transition:
+    color var(--dur-tip) var(--ease-out),
+    border-color var(--dur-tip) var(--ease-out);
+}
+
+.gate-drop:hover {
+  color: var(--ink-dim);
+  border-color: var(--rule-bright);
+}
+
+.gate-cost,
+.gate-error {
+  margin-left: auto;
+  font-family: var(--font-sans-stack);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+}
+
+.gate-cost b {
+  color: var(--ink-dim);
+  font-weight: 400;
+}
+
+.gate-error {
+  color: var(--state-fail);
+}
+
+.gate-missing {
+  flex: 0 0 auto;
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border: 1px solid var(--state-fail);
+  border-left-width: 2px;
+  font-family: var(--font-sans-stack);
+  font-size: 12.5px;
+  color: var(--ink-dim);
+}
