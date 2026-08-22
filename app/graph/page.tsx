@@ -1,140 +1,83 @@
-// TORN OUT 2026-08-22: the whole graph screen is being rebuilt. The file below is the
-// version that worked, commented line by line so it can be read while the new one is
-// written. Next needs a default export for this route to exist at all, so the placeholder
-// under the commented block is the only live code in the file.
+'use client'
 
-// 'use client'
-//
-// import Link from 'next/link'
-// import { useCallback, useEffect, useState } from 'react'
-// import { GraphCanvas } from '@/components/graph/GraphCanvas'
-// import { DivePanel } from '@/components/graph/DivePanel'
-// import type { GraphNode } from '../api/graph/route'
-//
-// /**
-//  * The graph.
-//  *
-//  * It opens empty and fills, one opinion at a time, because that is the honest order of
-//  * events: each arrival re-runs the nearest neighbour search over everything present, so
-//  * edges form and edges break as the population changes. Watching it fill is watching the
-//  * embedding space sort itself out, which is the one thing a static screenshot of a
-//  * finished graph cannot show.
-//  */
-//
-// /** Gap between arrivals. Slow enough to watch an edge break, quick enough to sit through. */
-// const ARRIVAL_MS = 620
-//
-// export default function GraphPage() {
-//   const [nodes, setNodes] = useState<GraphNode[]>([])
-//   const [admitted, setAdmitted] = useState(0)
-//   const [selected, setSelected] = useState<GraphNode | null>(null)
-//   const [error, setError] = useState<string | null>(null)
-//
-//   useEffect(() => {
-//     let live = true
-//     fetch('/api/graph')
-//       .then(async (res) => {
-//         const body = await res.json()
-//         if (!res.ok) throw new Error(body.error ?? `request failed, ${res.status}`)
-//         return body.nodes as GraphNode[]
-//       })
-//       .then((list) => {
-//         if (!live) return
-//         setNodes(list)
-//         // `?open=<batchId>` lands straight in one node's pipeline. A dive is the part
-//         // worth sending someone, and a link that only ever opens the whole graph makes
-//         // the sender describe with words what the screen already shows.
-//         const wanted = new URLSearchParams(window.location.search).get('open')
-//         if (!wanted) return
-//         const match = list.find((n) => n.batchId === wanted)
-//         if (match) {
-//           setAdmitted(list.length)
-//           setSelected(match)
-//         }
-//       })
-//       .catch((err: Error) => live && setError(err.message))
-//     return () => {
-//       live = false
-//     }
-//   }, [])
-//
-//   useEffect(() => {
-//     if (nodes.length === 0 || admitted >= nodes.length) return
-//     const reduceMotion =
-//       window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false
-//     if (reduceMotion) {
-//       setAdmitted(nodes.length)
-//       return
-//     }
-//     const timer = setTimeout(() => setAdmitted((n) => n + 1), ARRIVAL_MS)
-//     return () => clearTimeout(timer)
-//   }, [nodes, admitted])
-//
-//   const onSelect = useCallback((node: GraphNode | null) => setSelected(node), [])
-//
-//   const filling = nodes.length > 0 && admitted < nodes.length
-//
-//   return (
-//     <main className="graph-view" data-diving={selected ? 'yes' : 'no'}>
-//       <GraphCanvas
-//         nodes={nodes}
-//         selectedId={selected?.batchId ?? null}
-//         onSelect={onSelect}
-//         admitted={admitted}
-//       />
-//
-//       <div className="graph-top">
-//         <span className="graph-mark">DOXA</span>
-//         <span className="graph-count">
-//           {admitted} of {nodes.length} opinions
-//           {filling ? ', filling' : ''}
-//         </span>
-//         <Link className="graph-add" href="/">
-//           Add an opinion
-//         </Link>
-//       </div>
-//
-//       {error && <p className="graph-error">{error}</p>}
-//
-//       {nodes.length === 0 && !error && (
-//         <p className="graph-empty">
-//           No analysed opinions yet. Run one through intake and it lands here.
-//         </p>
-//       )}
-//
-//       {!selected && admitted > 0 && (
-//         <p className="graph-hint">
-//           Every node is the specimen its own run struck. Distance is the distance between
-//           the opinions. Click one to see the line that made it.
-//         </p>
-//       )}
-//
-//       {selected && (
-//         <DivePanel batchId={selected.batchId} onClose={() => setSelected(null)} />
-//       )}
-//
-//       {/* Text equivalent of the canvas, and the keyboard route into a dive. */}
-//       <ul className="sr-list" aria-label="Every analysed opinion">
-//         {nodes.slice(0, admitted).map((n) => (
-//           <li key={n.batchId}>
-//             <button onClick={() => setSelected(n)}>
-//               {n.batchId}: {n.opinion}
-//             </button>
-//           </li>
-//         ))}
-//       </ul>
-//     </main>
-//   )
-// }
-//
+import { useEffect, useState } from 'react'
+import type { ChartNode } from '../api/graph/route'
+import { ChartCanvas } from '@/components/chart/ChartCanvas'
+import { ChartPanel } from '@/components/chart/ChartPanel'
 
-export default function GraphPage() {
+/**
+ * The chart.
+ *
+ * The one screen anybody can open without knowing what any of this is. It answers one
+ * question, which is where an opinion sits among all the others, and it answers it by
+ * showing rather than explaining.
+ */
+
+export default function ChartPage() {
+  const [nodes, setNodes] = useState<ChartNode[] | null>(null)
+  const [selected, setSelected] = useState<ChartNode | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
+
+  useEffect(() => {
+    let live = true
+    fetch('/api/graph')
+      .then(async (res) => {
+        const body = await res.json()
+        if (!res.ok) throw new Error(body.error ?? `the chart could not be read, ${res.status}`)
+        return body.nodes as ChartNode[]
+      })
+      .then((list) => {
+        if (!live) return
+        setNodes(list)
+        // `?open=<id>` lands straight on one opinion, so a link to a run is a link to the
+        // thing itself and not to a screen the reader has to search.
+        const wanted = new URLSearchParams(window.location.search).get('open')
+        if (wanted) setSelected(list.find((n) => n.id === wanted) ?? null)
+      })
+      .catch((err: unknown) => {
+        if (live) setProblem(err instanceof Error ? err.message : String(err))
+      })
+    return () => {
+      live = false
+    }
+  }, [])
+
   return (
-    <main className="gate">
-      <div className="gate-body">
-        <div className="gate-cap">THE GRAPH</div>
-        <p className="gate-missing">This screen is being rebuilt.</p>
+    <main className="chart">
+      <div className="chart-bar">
+        <a className="gate-mark" href="/">
+          DOXA
+        </a>
+        <span className="chart-count">
+          {nodes === null
+            ? 'OPENING'
+            : nodes.length === 0
+              ? 'NOTHING HAS BEEN PUT THROUGH YET'
+              : `${nodes.length} ${nodes.length === 1 ? 'OPINION' : 'OPINIONS'}`}
+        </span>
       </div>
+
+      {problem && <p className="gate-missing chart-problem">{problem}</p>}
+
+      {nodes !== null && nodes.length > 0 && (
+        <ChartCanvas nodes={nodes} selectedId={selected?.id ?? null} onSelect={setSelected} />
+      )}
+
+      {nodes !== null && nodes.length === 0 && !problem && (
+        <p className="chart-empty">
+          Put an opinion through and it turns up here, next to the ones that mean something
+          close to it.
+        </p>
+      )}
+
+      {selected && <ChartPanel node={selected} onClose={() => setSelected(null)} />}
+
+      {nodes !== null && nodes.length > 0 && !selected && (
+        <p className="chart-hint">
+          Every square is one opinion, drawn from what was measured in it. Two sit close when
+          they mean something close. Click one to read it.
+        </p>
+      )}
     </main>
   )
 }

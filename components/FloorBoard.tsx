@@ -239,8 +239,8 @@ export default function FloorBoard({ batchId }: Props) {
 
       <div className="gate-foot">
         {done ? (
-          <a className="gate-sign" href={`/certificate/${batchId}`}>
-            SEE THE RECEIPT
+          <a className="gate-sign" href={`/graph?open=${batchId}`}>
+            OPEN THE CHART
           </a>
         ) : (
           <span className="gate-sign is-waiting">

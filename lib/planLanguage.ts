@@ -100,6 +100,73 @@ export function plainName(id: string, fallback: string): string {
 }
 
 /**
+ * One sentence per tool, for a stranger.
+ *
+ * The chart is the screen anybody can open, so this is the register it speaks in: what the
+ * tool looked at, in words somebody would use out loud. The operator's own blurb is written
+ * for the person building the factory and says things like "token frequency against a Zipf
+ * reference". Nobody arrives knowing what that is.
+ */
+const PLAIN_WHAT: Record<string, string> = {
+  TOKENIZE: 'Counted the words and how often each one comes back.',
+  'CLAIM-EX': 'Pulled out the actual claim being made.',
+  MODALITY: 'Measured how strongly it is stated, from "might" to "always".',
+  'PARSE-DEPTH': 'Looked at how the sentence is built, and how far it nests.',
+  'HEDGE-7': 'Counted the softeners: maybe, sort of, I think.',
+  'FK-READ': 'Worked out what reading age it is written for.',
+  RHETORIC: 'Looked for the persuasion moves: repetition, contrast, appeals.',
+  'VALENCE-ARC': 'Tracked the mood from the first word to the last.',
+  'ZIPF-DRIFT': 'Checked how unusual the word choice is against ordinary English.',
+
+  'PRIOR-ART': 'Went out to the web to see whether anyone has said this before.',
+  CORROBORATE: 'Went out to the web to find where people argued about it.',
+  'DEMO-SHOP': 'Read a live catalogue page to prove the scraper still works.',
+
+  EMBED: 'Turned the meaning into numbers, which is what places it on this chart.',
+  'CONTRA-CHK': 'Checked whether it argues against itself.',
+  STANCE: 'Worked out which side it takes.',
+  'TOPIC-REL': 'Found the opinions nearest to it in meaning.',
+
+  COMPRESS: 'Squeezed the text to see how much of it repeats.',
+  ENTROPY: 'Measured how much surprise each letter carries.',
+  GEMATRIA: 'Added up the letters as numbers, the old way.',
+  'NATAL-CHART': 'Read the sentence as if it had a birth chart.',
+  PHONETIC: 'Listened to how blunt or soft it sounds when said out loud.',
+  'PRIME-SIG': 'Turned the letter counts into their prime factors.',
+}
+
+export function plainWhat(id: string, fallback: string): string {
+  return PLAIN_WHAT[id] ?? fallback
+}
+
+/**
+ * The four groups of tools, said as a stranger would picture them.
+ *
+ * A name and one line each. The panel shows these four lines and then the tool names, and
+ * that is the whole account of the process. Listing every tool's own sentence was tried
+ * first and came out as a wall of eighteen paragraphs that nobody would read to the end
+ * of, which is a worse answer to "what was done to it" than four lines that land.
+ */
+export const PLAIN_WING: Record<Wing, { name: string; line: string }> = {
+  forensics: {
+    name: 'Reading the words',
+    line: 'Counting, measuring and taking apart the sentence itself.',
+  },
+  field: {
+    name: 'Checking the web',
+    line: 'The only part that leaves this machine and looks at the open web.',
+  },
+  semantics: {
+    name: 'Weighing the meaning',
+    line: 'Working out what it means, which side it takes, and what it sits near.',
+  },
+  esoteric: {
+    name: 'The strange readings',
+    line: 'Old and odd ways of reading a sentence, kept because they are honest about being odd.',
+  },
+}
+
+/**
  * Reading order inside a step, which is the order of the table above.
  *
  * The work order arrives in the planner's order, and only the first three chips are
