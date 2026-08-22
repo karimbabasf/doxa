@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { layer } from '@/lib/executor/topo'
+// The switch rule is shared with the plain gate, which now carries switches of its own.
+// Two copies would eventually disagree, and the one on screen would be the one lying.
+import { resolve } from '@/lib/planSwitches'
 import type { Operator } from '@/lib/types'
 import OperatorCard, { listOf, type CardState, type GateOperator } from './OperatorCard'
 
@@ -22,32 +25,10 @@ export type { GateOperator } from './OperatorCard'
 
 const useIsomorphicLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
-type Resolved = { on: boolean; blockedBy: string[] }
 type Line = { from: string; to: string; d: string; x: number; y: number }
 type Geometry = { w: number; h: number; lines: Line[] }
 
 const EMPTY_GEOMETRY: Geometry = { w: 0, h: 0, lines: [] }
-
-/**
- * An operator runs when nobody switched it off and every need of its own is running.
- * Deriving it this way, rather than storing an enabled flag per card, is what lets a
- * dependency come back and bring its dependents with it while leaving the ones a
- * person refused by hand switched off.
- */
-function resolve(layers: GateOperator[][], off: ReadonlySet<string>): Map<string, Resolved> {
-  const state = new Map<string, Resolved>()
-  for (const layer of layers) {
-    for (const op of layer) {
-      if (off.has(op.id)) {
-        state.set(op.id, { on: false, blockedBy: [] })
-        continue
-      }
-      const blockedBy = [...new Set(op.needs)].filter(need => !state.get(need)?.on)
-      state.set(op.id, { on: blockedBy.length === 0, blockedBy })
-    }
-  }
-  return state
-}
 
 type Anchor = { from: string; to: string; x1: number; y1: number; x2: number; y2: number }
 

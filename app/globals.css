@@ -984,8 +984,7 @@ button:active,
 .gate-line {
   flex: 0 1 auto;
   min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
   align-items: stretch;
 }
 
@@ -999,24 +998,117 @@ button:active,
   background: var(--ground-raised);
 }
 
-/* The steps butt together and the arrow sits in the seam, so the row reads as
-   one line rather than four unrelated cards. */
-.gate-step + .gate-step {
-  border-left: 0;
+/* ---------------------------------------------------------------------------
+   The conduit between two steps.
+
+   The seam used to hold a chevron, which is punctuation: it separates two boxes
+   without claiming anything about them. This is cabling. A rail runs out of one
+   step and into the next, an arrow head states the direction once, and a light
+   travels the rail on a loop.
+
+   The light carries no data. Nothing is running at the gate, and a conduit that
+   pretended otherwise would be the screen's first lie. The seams are offset in
+   time by `--seam` so the room reads one pulse moving the length of the line
+   rather than two blinks that happen to share a screen.
+
+   A seam whose upstream step has every tool switched off goes dark, because
+   nothing is going to come down it.
+   --------------------------------------------------------------------------- */
+
+.gate-step {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
-.gate-step + .gate-step::before {
-  content: '';
+.gate-conduit {
+  position: relative;
+  flex: 0 0 56px;
+  align-self: stretch;
+}
+
+.gate-rail {
   position: absolute;
-  left: -5px;
   top: 50%;
-  width: 9px;
-  height: 9px;
-  margin-top: -5px;
+  left: 0;
+  right: 11px;
+  height: 1px;
+  background: var(--rule-bright);
+  transition: background-color var(--dur-row) var(--ease-out);
+}
+
+.gate-head {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  margin-top: -4px;
   border-top: 1px solid var(--rule-bright);
   border-right: 1px solid var(--rule-bright);
   transform: rotate(45deg);
-  background: var(--ground);
+  transition: border-color var(--dur-row) var(--ease-out);
+}
+
+.gate-spark {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 16px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--ink-dim) 72%, transparent);
+  opacity: 0;
+  animation: doxa-flow 2.8s linear infinite;
+  animation-delay: calc(var(--seam, 1) * 0.42s);
+}
+
+@keyframes doxa-flow {
+  0% {
+    transform: translateX(-16px);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(45px);
+    opacity: 0;
+  }
+}
+
+/* The step that leaves the machine sends an orange signal down its own seam. */
+.gate-conduit.is-web .gate-rail {
+  background: color-mix(in srgb, var(--signal) 60%, var(--rule));
+}
+
+.gate-conduit.is-web .gate-head {
+  border-color: var(--signal);
+}
+
+.gate-conduit.is-web .gate-spark {
+  background: linear-gradient(90deg, transparent, var(--signal) 72%, transparent);
+}
+
+.gate-conduit[data-carrying='false'] .gate-rail {
+  background: var(--rule);
+}
+
+.gate-conduit[data-carrying='false'] .gate-head {
+  border-color: var(--rule);
+}
+
+.gate-conduit[data-carrying='false'] .gate-spark {
+  display: none;
+}
+
+/* The pulse is the one thing on this screen that moves on its own. Reduced
+   motion means the rail and the arrow, which carry the whole claim anyway. */
+@media (prefers-reduced-motion: reduce) {
+  .gate-spark {
+    display: none;
+  }
 }
 
 /* The web step is the one the room is here to see: the only colour on the
@@ -1024,10 +1116,6 @@ button:active,
 .gate-step.is-web {
   border-color: var(--signal);
   background: color-mix(in srgb, var(--signal) 7%, var(--ground-raised));
-}
-
-.gate-step.is-web + .gate-step::before {
-  border-color: var(--signal);
 }
 
 .gate-step-n {
@@ -1081,45 +1169,82 @@ button:active,
 }
 
 .gate-tools {
+  flex: 0 0 auto;
   margin-top: 18px;
   display: flex;
   flex-wrap: wrap;
-  gap: 5px;
+  gap: 6px;
   align-content: flex-start;
   overflow: hidden;
 }
 
-.gate-tool,
-.gate-more {
-  padding: 3px 8px;
+/* ---------------------------------------------------------------------------
+   The tools the planner picked.
+
+   These are the point of the screen: proof the line was composed for this exact
+   sentence rather than printed from a template. They used to be 9.5px grey boxes
+   that read as metadata. Now each one carries a dot in its wing colour, so which
+   part of the factory a tool belongs to is legible without reading a word, and
+   a tool that is off is visibly off rather than merely absent.
+   --------------------------------------------------------------------------- */
+
+.gate-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px 4px 7px;
   border: 1px solid var(--rule-bright);
   background: none;
   font: inherit;
-  font-size: 9.5px;
-  letter-spacing: 0.07em;
-  color: var(--ink-faint);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: var(--ink-dim);
   white-space: nowrap;
   cursor: pointer;
   transition:
     color var(--dur-tip) var(--ease-out),
     border-color var(--dur-tip) var(--ease-out),
-    background-color var(--dur-tip) var(--ease-out);
+    background-color var(--dur-tip) var(--ease-out),
+    opacity var(--dur-tip) var(--ease-out);
 }
 
-.gate-more {
-  border-style: dashed;
+.gate-tool-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  transition: opacity var(--dur-tip) var(--ease-out);
 }
 
-.gate-tool:hover,
-.gate-more:hover {
+.gate-tool:hover {
   color: var(--ink);
   border-color: var(--ink-faint);
 }
 
+/* The chip whose reason is in the strip below. One at a time, so the strip and
+   the chip always name the same tool. */
 .gate-tool[aria-pressed='true'] {
   color: var(--ground);
   border-color: var(--ink);
   background: var(--ink);
+}
+
+/* A tool switched off by hand, or one the planner refused. Struck through and
+   dimmed: a plan that shows what it turned down is more convincing than one
+   that hides it. */
+.gate-tool[data-on='off'] {
+  opacity: 0.38;
+  text-decoration: line-through;
+}
+
+.gate-tool[data-on='off'] .gate-tool-dot {
+  opacity: 0.3;
+}
+
+/* Held back, which is not the same as refused. Nobody touched this switch: it
+   reads a result that is no longer being produced. Dashed, never struck. */
+.gate-tool[data-on='held'] {
+  opacity: 0.6;
+  border-style: dashed;
 }
 
 .gate-step.is-web .gate-tool {
@@ -1138,18 +1263,251 @@ button:active,
   color: var(--ground);
 }
 
-/* A tool the planner refused stays on the screen, struck through. A plan that
-   shows what it turned down is more convincing than one that hides it. */
-.gate-tool.is-off {
-  opacity: 0.4;
+/* The press scale from the base sheet would nudge a chip inside a wrapped row
+   and shuffle the ones after it. */
+.gate-tool:active {
+  transform: none;
+}
+
+/* ---------------------------------------------------------------------------
+   The switches, as a menu under the step they belong to.
+
+   Every tool in a step, each with its own switch, opened from the step itself or
+   from the one link in the footer. Before this, refusing a tool meant leaving the
+   plain gate for the graph at `?detail=1`, which is a screen for somebody who
+   already understands the machine. The rule a flip obeys is shared with that
+   screen in `lib/planSwitches.ts`, so the two cannot drift.
+
+   The disclosure animates `grid-template-rows` from `0fr` to `1fr`, which is the
+   one honest way to animate to a height nobody measured. It is interruptible, so
+   a person who changes their mind mid open does not wait for the open to finish.
+   --------------------------------------------------------------------------- */
+
+.gate-open {
+  align-self: flex-start;
+  margin-top: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 8px;
+  border: 1px dashed var(--rule-bright);
+  background: none;
+  font: inherit;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition:
+    color var(--dur-tip) var(--ease-out),
+    border-color var(--dur-tip) var(--ease-out);
+}
+
+.gate-open:hover {
+  color: var(--ink);
+  border-color: var(--ink-faint);
+}
+
+.gate-open:active {
+  transform: none;
+}
+
+.gate-open-mark {
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  transform: rotate(45deg);
+  transition: transform var(--dur-panel) var(--ease-out);
+}
+
+.gate-step.is-open .gate-open-mark {
+  transform: rotate(225deg);
+  margin-top: 2px;
+}
+
+.gate-menu {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-row) var(--ease-out);
+}
+
+.gate-menu[data-open='true'] {
+  grid-template-rows: 1fr;
+}
+
+.gate-menu-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* The page never scrolls. A step holding a dozen switches scrolls inside its own
+   menu instead, which loses nothing: the step, its title and the sign button all
+   stay exactly where they were. */
+/* Two columns where the step is wide enough for them.
+   A step holds eight to ten tools and the box it sits in is roughly 500px across.
+   One column per row meant half the switches lived below a fold inside a menu that
+   had just been opened to show them. Two columns puts the whole step on screen at
+   the width this layout already has, and the list falls back to one column when a
+   narrower screen cannot hold two. */
+.gate-menu-list {
+  margin: 13px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 0 16px;
+  align-content: start;
+  /* The page never scrolls, so the menu is capped by what the viewport has left
+     after the bar, the sentence, the step heads, the reason strip and the footer.
+     Whatever does not fit scrolls inside the list, and the floor of 120px keeps a
+     short screen showing switches rather than a sliver. */
+  max-height: max(120px, min(430px, calc(100dvh - 620px)));
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rule-bright) transparent;
+  border-top: 1px solid var(--rule);
+}
+
+.gate-menu[data-open='true'] .gate-menu-list > li {
+  animation: doxa-rise var(--dur-row) var(--ease-out) both;
+  animation-delay: calc(var(--i) * 26ms);
+}
+
+@keyframes doxa-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gate-menu[data-open='true'] .gate-menu-list > li {
+    animation: none;
+  }
+}
+
+.gate-switch {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'box name id'
+    '.   why  why';
+  align-items: center;
+  gap: 3px 10px;
+  width: 100%;
+  padding: 9px 6px;
+  border: 0;
+  border-bottom: 1px solid var(--rule);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-tip) var(--ease-out),
+    opacity var(--dur-tip) var(--ease-out);
+}
+
+.gate-switch:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--ink) 5%, transparent);
+}
+
+.gate-switch:active {
+  transform: none;
+}
+
+.gate-switch:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+/* A real throw, not a checkbox. The knob slides rather than appearing, because
+   a switch that teleports reads as a redraw and not as something being moved. */
+.gate-switch-box {
+  grid-area: box;
+  position: relative;
+  width: 17px;
+  height: 10px;
+  border: 1px solid var(--rule-bright);
+  transition: border-color var(--dur-tip) var(--ease-out);
+}
+
+.gate-switch-box::after {
+  content: '';
+  position: absolute;
+  top: 1px;
+  bottom: 1px;
+  left: 1px;
+  width: 6px;
+  background: var(--ink-faint);
+  transition:
+    transform var(--dur-panel) var(--ease-out),
+    background-color var(--dur-panel) var(--ease-out);
+}
+
+.gate-switch[data-on='on'] .gate-switch-box {
+  border-color: var(--ink);
+}
+
+.gate-switch[data-on='on'] .gate-switch-box::after {
+  transform: translateX(7px);
+  background: var(--ink);
+}
+
+.gate-step.is-web .gate-switch[data-on='on'] .gate-switch-box {
+  border-color: var(--signal);
+}
+
+.gate-step.is-web .gate-switch[data-on='on'] .gate-switch-box::after {
+  background: var(--signal);
+}
+
+.gate-switch-name {
+  grid-area: name;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-sans-stack);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.gate-switch[data-on='off'] .gate-switch-name {
+  color: var(--ink-faint);
   text-decoration: line-through;
 }
 
-/* The press scale from the base sheet would nudge a chip inside a wrapped row
-   and shuffle the ones after it. */
-.gate-tool:active,
-.gate-more:active {
-  transform: none;
+.gate-switch-id {
+  grid-area: id;
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  color: var(--rule-bright);
+}
+
+.gate-switch-why {
+  grid-area: why;
+  font-family: var(--font-sans-stack);
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+.gate-switch[data-on='held'] .gate-switch-box {
+  border-style: dashed;
+}
+
+.gate-switch[data-on='held'] .gate-switch-box::after {
+  opacity: 0.4;
+}
+
+.gate-switch[data-on='held'] .gate-switch-why {
+  color: var(--state-live);
 }
 
 .gate-none {
@@ -1263,9 +1621,24 @@ button:active,
   padding: 0;
   border: 0;
   border-bottom: 1px solid var(--rule-bright);
+  background: none;
   font-family: var(--font-sans-stack);
   font-size: 12.5px;
   letter-spacing: 0;
+  color: var(--ink-faint);
+}
+
+/* The graph is a third thing to look at, so it is quieter than the switches and
+   much quieter than signing. Whoever wants it knows what they are looking for. */
+.gate-graph {
+  font-family: var(--font-sans-stack);
+  font-size: 12px;
+  color: var(--rule-bright);
+  text-decoration: none;
+  transition: color var(--dur-tip) var(--ease-out);
+}
+
+.gate-graph:hover {
   color: var(--ink-faint);
 }
 
@@ -1320,7 +1693,6 @@ button:active,
 
 .wait {
   flex: 0 0 auto;
-  margin-top: 26px;
   overflow: hidden;
   border: 1px solid var(--rule);
   border-top-color: var(--rule-bright);

@@ -1,28 +1,37 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  CHIPS_SHOWN,
   STEPS,
   plainDuration,
   plainName,
   readingOrder,
+  type Step,
   type StepId,
 } from '@/lib/planLanguage'
+import { enabledIds, estimateMs, resolveList, type Resolved } from '@/lib/planSwitches'
+import type { Wing } from '@/lib/types'
 import { DitherButton } from './dither-kit'
-import type { GateOperator } from './OperatorCard'
+import { listOf, type GateOperator } from './OperatorCard'
 
 /**
  * The plan, on one screen, for a person who has never seen this before.
  *
- * The detailed graph still exists at `?detail=1`, and every switch on it still works.
- * This is the view the room reads: four steps left to right, the tools inside each one
- * as titles only, and one reason strip that never moves.
+ * The screen reads as one line of machinery: steps in boxes, a lit conduit carrying the
+ * work out of each box into the next, and inside each box the tools the planner actually
+ * picked for this sentence. The conduit is the claim the old chevron only hinted at, that
+ * this is a pipeline and step 3 is fed by step 2.
  *
- * Two rules the layout enforces rather than asks for:
- *   nothing scrolls, because a demo that scrolls loses the step it was on, and
- *   clicking a tool never changes the size of anything, because a screen that reflows
- *   under a pointer reads as broken however correct it is.
+ * Every step also opens a menu of its own switches, so a tool can be refused here rather
+ * than by travelling to the graph at `?detail=1`. The switch rule is shared with that
+ * screen (`lib/planSwitches.ts`), so the two cannot disagree about what a flip did, and
+ * the footer reads its estimate off the switches rather than off the stored order, so the
+ * wait visibly falls when the web is switched off.
+ *
+ * Two rules the layout still enforces rather than asks for:
+ *   the page never scrolls, so a demo cannot lose the step it was on, and
+ *   clicking a tool never changes the size of anything. Opening a menu does, because that
+ *   is the thing the person just asked for, and it grows inside its own step.
  */
 
 type Props = {
@@ -37,13 +46,33 @@ const IDLE = 'Pick any tool above and its reason shows here.'
 
 const message = (err: unknown) => (err instanceof Error ? err.message : String(err))
 
+const WING_INK: Record<Wing, string> = {
+  field: 'var(--wing-field)',
+  forensics: 'var(--wing-forensics)',
+  semantics: 'var(--wing-semantics)',
+  esoteric: 'var(--wing-esoteric)',
+}
+
+type SwitchState = 'on' | 'off' | 'held'
+
+/** A refusal and a block look the same on the floor. On the gate they must not. */
+function switchState(resolved: Resolved | undefined): SwitchState {
+  if (!resolved) return 'off'
+  if (resolved.on) return 'on'
+  return resolved.blockedBy.length > 0 ? 'held' : 'off'
+}
+
 export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt }: Props) {
   const [why, setWhy] = useState<{ id: string; text: string } | null>(null)
   const [opened, setOpened] = useState<ReadonlySet<StepId>>(() => new Set())
+  const [off, setOff] = useState<ReadonlySet<string>>(
+    () => new Set(operators.filter(op => !op.enabled).map(op => op.id)),
+  )
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const locked = Boolean(signedAt)
+  const refused = useMemo(() => operators.filter(op => !op.enabled).length, [operators])
 
   // Every operator lands in exactly one step, by wing. A wing the steps do not claim
   // would vanish silently, so it is collected and shown rather than dropped.
@@ -57,8 +86,14 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
     return map
   }, [operators])
 
-  const running = operators.filter(op => op.enabled)
+  const state = useMemo(() => resolveList(operators, off), [operators, off])
+  const running = useMemo(() => operators.filter(op => state.get(op.id)?.on), [operators, state])
   const onWeb = running.filter(op => op.wing === 'field').length
+
+  // The stored estimate is the number the planner signed off with. The moment a switch
+  // moves it is stale, so the footer recomputes and falls back to the stored figure only
+  // while nothing has been touched.
+  const waitMs = off.size === refused ? estMs : estimateMs(operators, state)
 
   const sign = useCallback(async () => {
     if (locked || busy) return
@@ -68,7 +103,7 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
       const res = await fetch('/api/plan/sign', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ batchId, enabledIds: running.map(op => op.id) }),
+        body: JSON.stringify({ batchId, enabledIds: enabledIds(operators, state) }),
       })
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { error?: string }
@@ -79,7 +114,7 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
       setError(message(err))
       setBusy(false)
     }
-  }, [batchId, busy, locked, running])
+  }, [batchId, busy, locked, operators, state])
 
   // The keyboard route the old gate had. Signing is the one action on this screen and
   // it should not need a pointer.
@@ -98,6 +133,66 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
     setWhy(current => (current?.id === id ? null : { id, text }))
   }, [])
 
+  const allOpen = STEPS.every(step => opened.has(step.id))
+
+  const toggleStep = useCallback((id: StepId) => {
+    setOpened(current => {
+      const next = new Set(current)
+      if (!next.delete(id)) next.add(id)
+      return next
+    })
+  }, [])
+
+  /**
+   * A switch says what it did while the pointer is still on it. Learning that a flip took
+   * three other tools with it by watching the floor fail is the exact failure this screen
+   * exists to prevent, so the consequence is written into the reason strip.
+   */
+  const flip = useCallback(
+    (op: GateOperator) => {
+      if (locked) return
+      const next = new Set(off)
+      const turningOff = !next.has(op.id)
+      if (turningOff) next.add(op.id)
+      else next.delete(op.id)
+
+      const after = resolveList(operators, next)
+      const name = plainName(op.id, op.name)
+      const moved = (wanted: boolean) =>
+        operators
+          .filter(
+            other =>
+              other.id !== op.id &&
+              Boolean(state.get(other.id)?.on) === !wanted &&
+              Boolean(after.get(other.id)?.on) === wanted,
+          )
+          .map(other => plainName(other.id, other.name))
+
+      if (turningOff) {
+        const lost = moved(false)
+        setWhy({
+          id: op.id,
+          text:
+            lost.length > 0
+              ? `${name} is off, and that holds back ${listOf(lost)}, because ${lost.length > 1 ? 'they read' : 'it reads'} its result.`
+              : `${name} is off. Nothing else on this plan reads its result, so nothing else changed.`,
+        })
+      } else {
+        const back = moved(true)
+        setWhy({
+          id: op.id,
+          text:
+            back.length > 0
+              ? `${name} is back on, and so ${listOf(back)} can run again.`
+              : `${name} is back on.`,
+        })
+      }
+
+      setOff(next)
+    },
+    [locked, off, operators, state],
+  )
+
   return (
     <main className="gate">
       <div className="gate-bar">
@@ -114,109 +209,133 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
           <blockquote>{opinion}</blockquote>
         </div>
 
-        <div className="gate-cap">CLICK ANY TOOL TO SEE WHY IT WAS PICKED</div>
+        <div className="gate-cap">
+          {allOpen
+            ? 'FLIP ANY SWITCH TO TAKE A TOOL OFF THE LINE'
+            : 'CLICK ANY TOOL TO SEE WHY IT WAS PICKED'}
+        </div>
 
         <div className="gate-line">
-          {STEPS.map(step => {
+          {STEPS.map((step, index) => {
             const ops = byStep.get(step.id) ?? []
             const isWeb = step.id === 'web'
             const open = opened.has(step.id)
-            const shown = open ? ops : ops.slice(0, CHIPS_SHOWN)
-            const rest = ops.length - shown.length
+            const live = ops.filter(op => state.get(op.id)?.on)
 
             // The web step is the one the room is here to see, but only when it has
             // something to do. An empty step wearing the accent colour and the live
             // badge points the whole screen at the one box that is not going to run,
             // which is how the gate came to advertise its own no-op.
-            const leaves = isWeb && ops.length > 0
-            const stayed = isWeb && ops.length === 0
+            const leaves = isWeb && live.length > 0
+            const stayed = isWeb && live.length === 0
+
+            const upstream = index > 0 ? (byStep.get(STEPS[index - 1].id) ?? []) : []
 
             return (
-              <section
-                key={step.id}
-                className={`gate-step${leaves ? ' is-web' : ''}${stayed ? ' is-stayed' : ''}`}
-              >
-                <div className="gate-step-bar">
-                  <span className="gate-step-n">{step.n}</span>
-                  {ops.length > 0 && (
-                    <span className="gate-step-count">
-                      {ops.length} {ops.length === 1 ? 'TOOL' : 'TOOLS'}
-                    </span>
-                  )}
-                  {stayed && <span className="gate-step-count">NOT USED</span>}
-                </div>
-                <h2>{step.title}</h2>
-                <p>{step.line}</p>
-                {leaves && (
-                  <span className="gate-badge">
-                    <span className="gate-dot" />
-                    BRIGHT DATA
-                  </span>
+              <Fragment key={step.id}>
+                {index > 0 && (
+                  <Conduit
+                    seam={index}
+                    from={STEPS[index - 1]}
+                    carrying={upstream.some(op => state.get(op.id)?.on)}
+                  />
                 )}
 
-                <div className="gate-tools">
-                  {shown.map(op => (
-                    <button
-                      key={op.id}
-                      type="button"
-                      className={`gate-tool${op.enabled ? '' : ' is-off'}`}
-                      aria-pressed={why?.id === op.id}
-                      onClick={() => pick(op.id, op.rationale || op.blurb)}
-                    >
-                      {plainName(op.id, op.name)}
-                    </button>
-                  ))}
-
-                  {step.id === 'print' && (
-                    <>
-                      <button
-                        type="button"
-                        className="gate-tool"
-                        aria-pressed={why?.id === '#image'}
-                        onClick={() =>
-                          pick(
-                            '#image',
-                            'The finished image. One of a kind, because every number behind it came from your exact wording.',
-                          )
-                        }
-                      >
-                        The image
-                      </button>
-                      <button
-                        type="button"
-                        className="gate-tool"
-                        aria-pressed={why?.id === '#receipt'}
-                        onClick={() =>
-                          pick(
-                            '#receipt',
-                            'Every reading, its number, and which tool produced it. This is what makes the image checkable rather than pretty.',
-                          )
-                        }
-                      >
-                        The receipt
-                      </button>
-                    </>
-                  )}
-
-                  {rest > 0 && (
-                    <button
-                      type="button"
-                      className="gate-more"
-                      onClick={() => setOpened(s => new Set(s).add(step.id))}
-                    >
-                      {rest} more
-                    </button>
-                  )}
-
-                  {ops.length === 0 && step.id !== 'print' && (
-                    <span className="gate-none">
-                      {isWeb
-                        ? 'The planner read your sentence and found nothing worth checking outside.'
-                        : 'Nothing in this step for this sentence.'}
+                <section
+                  className={`gate-step${leaves ? ' is-web' : ''}${stayed ? ' is-stayed' : ''}${open ? ' is-open' : ''}`}
+                >
+                  <div className="gate-step-bar">
+                    <span className="gate-step-n">{step.n}</span>
+                    {ops.length > 0 && (
+                      <span className="gate-step-count">
+                        {live.length} OF {ops.length} {ops.length === 1 ? 'TOOL' : 'TOOLS'}
+                      </span>
+                    )}
+                    {stayed && ops.length === 0 && <span className="gate-step-count">NOT USED</span>}
+                  </div>
+                  <h2>{step.title}</h2>
+                  <p>{step.line}</p>
+                  {leaves && (
+                    <span className="gate-badge">
+                      <span className="gate-dot" />
+                      BRIGHT DATA
                     </span>
                   )}
-                </div>
-              </section>
+
+                  <div className="gate-tools">
+                    {ops.map(op => (
+                      <button
+                        key={op.id}
+                        type="button"
+                        className="gate-tool"
+                        data-on={switchState(state.get(op.id))}
+                        aria-pressed={why?.id === op.id}
+                        onClick={() => pick(op.id, op.rationale || op.blurb)}
+                      >
+                        <i className="gate-tool-dot" style={{ background: WING_INK[op.wing] }} />
+                        {plainName(op.id, op.name)}
+                      </button>
+                    ))}
+
+                    {ops.length === 0 && (
+                      <span className="gate-none">
+                        {isWeb
+                          ? 'The planner read your sentence and found nothing worth checking outside.'
+                          : 'Nothing in this step for this sentence.'}
+                      </span>
+                    )}
+                  </div>
+
+                  {ops.length > 0 && (
+                    <button
+                      type="button"
+                      className="gate-open"
+                      aria-expanded={open}
+                      onClick={() => toggleStep(step.id)}
+                    >
+                      <i className="gate-open-mark" />
+                      {open ? 'CLOSE' : `${ops.length} SWITCHES`}
+                    </button>
+                  )}
+
+                  <div className="gate-menu" data-open={open}>
+                    <div className="gate-menu-clip">
+                      <ul className="gate-menu-list">
+                        {ops.map((op, i) => {
+                          const resolved = state.get(op.id)
+                          const on = switchState(resolved)
+                          return (
+                            <li key={op.id} style={{ '--i': i } as React.CSSProperties}>
+                              <button
+                                type="button"
+                                role="switch"
+                                aria-checked={on === 'on'}
+                                className="gate-switch"
+                                data-on={on}
+                                disabled={locked || on === 'held'}
+                                onClick={() => flip(op)}
+                              >
+                                <i className="gate-switch-box" />
+                                {/* Two columns per step means a long name truncates. The
+                                    full one is one hover away rather than gone. */}
+                                <span className="gate-switch-name" title={plainName(op.id, op.name)}>
+                                  {plainName(op.id, op.name)}
+                                </span>
+                                <span className="gate-switch-id">{op.id}</span>
+                                <span className="gate-switch-why">
+                                  {on === 'held' && resolved
+                                    ? `Held back: it reads ${listOf(resolved.blockedBy)}.`
+                                    : op.blurb}
+                                </span>
+                              </button>
+                            </li>
+                          )
+                        })}
+                      </ul>
+                    </div>
+                  </div>
+                </section>
+              </Fragment>
             )
           })}
         </div>
@@ -244,24 +363,63 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
             variant="solid"
             className="gate-sign"
             onClick={() => void sign()}
-            disabled={busy}
+            disabled={busy || running.length === 0}
           >
             {busy ? 'SENDING IT DOWN THE LINE' : 'SIGN IT AND RUN'}
           </DitherButton>
         )}
-        <a className="gate-drop" href={`/gate/${batchId}?detail=1`}>
-          Or see every tool and its switch
+
+        <button
+          type="button"
+          className="gate-drop"
+          onClick={() => setOpened(allOpen ? new Set() : new Set(STEPS.map(step => step.id)))}
+        >
+          {allOpen ? 'Hide every switch' : 'Or see every tool and its switch'}
+        </button>
+
+        <a className="gate-graph" href={`/gate/${batchId}?detail=1`}>
+          As a graph
         </a>
+
         {error ? (
           <span className="gate-error">{error}</span>
+        ) : running.length === 0 ? (
+          <span className="gate-cost">
+            Every tool is switched off, so there is nothing to run. Turn one back on.
+          </span>
         ) : (
           <span className="gate-cost">
             <b>{running.length}</b> tools will run, <b>{onWeb}</b> of them on the live web. It
-            takes {plainDuration(estMs)}
+            takes {plainDuration(waitMs)}
             {onWeb > 0 ? ', most of it waiting on the web' : ''}.
           </span>
         )}
       </div>
     </main>
+  )
+}
+
+/**
+ * The seam between two steps, drawn as cabling rather than punctuation.
+ *
+ * A light runs left to right along the rail, and the seams are offset in time so the room
+ * reads one pulse travelling the length of the line instead of two unrelated blinks. It
+ * carries no data: nothing is running yet at the gate, and a conduit that pretended
+ * otherwise would be this screen's first lie. It says direction, and it says these boxes
+ * are joined. A seam whose upstream step has every tool switched off goes dark, because
+ * nothing is going to come down it.
+ */
+function Conduit({ seam, from, carrying }: { seam: number; from: Step; carrying: boolean }) {
+  return (
+    <div
+      className={`gate-conduit${from.id === 'web' ? ' is-web' : ''}`}
+      data-carrying={carrying}
+      aria-hidden="true"
+      style={{ '--seam': seam } as React.CSSProperties}
+    >
+      <i className="gate-rail" />
+      <i className="gate-spark" />
+      <i className="gate-head" />
+    </div>
   )
 }
