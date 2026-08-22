@@ -64,7 +64,6 @@ function switchState(resolved: Resolved | undefined): SwitchState {
 
 export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt }: Props) {
   const [why, setWhy] = useState<{ id: string; text: string } | null>(null)
-  const [opened, setOpened] = useState<ReadonlySet<StepId>>(() => new Set())
   const [off, setOff] = useState<ReadonlySet<string>>(
     () => new Set(operators.filter(op => !op.enabled).map(op => op.id)),
   )
@@ -131,16 +130,6 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
 
   const pick = useCallback((id: string, text: string) => {
     setWhy(current => (current?.id === id ? null : { id, text }))
-  }, [])
-
-  const allOpen = STEPS.every(step => opened.has(step.id))
-
-  const toggleStep = useCallback((id: StepId) => {
-    setOpened(current => {
-      const next = new Set(current)
-      if (!next.delete(id)) next.add(id)
-      return next
-    })
   }, [])
 
   /**
@@ -210,16 +199,13 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
         </div>
 
         <div className="gate-cap">
-          {allOpen
-            ? 'FLIP ANY SWITCH TO TAKE A TOOL OFF THE LINE'
-            : 'CLICK ANY TOOL TO SEE WHY IT WAS PICKED'}
+          CLICK A TOOL FOR ITS REASON. FLIP ITS SWITCH TO TAKE IT OFF THE LINE.
         </div>
 
         <div className="gate-line">
           {STEPS.map((step, index) => {
             const ops = byStep.get(step.id) ?? []
             const isWeb = step.id === 'web'
-            const open = opened.has(step.id)
             const live = ops.filter(op => state.get(op.id)?.on)
 
             // The web step is the one the room is here to see, but only when it has
@@ -242,13 +228,14 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
                 )}
 
                 <section
-                  className={`gate-step${leaves ? ' is-web' : ''}${stayed ? ' is-stayed' : ''}${open ? ' is-open' : ''}`}
+                  className={`gate-step${leaves ? ' is-web' : ''}${stayed ? ' is-stayed' : ''}`}
                 >
                   <div className="gate-step-bar">
                     <span className="gate-step-n">{step.n}</span>
                     {ops.length > 0 && (
                       <span className="gate-step-count">
-                        {live.length} OF {ops.length} {ops.length === 1 ? 'TOOL' : 'TOOLS'}
+                        {live.length} ON
+                        {live.length < ops.length ? ` OF ${ops.length}` : ''}
                       </span>
                     )}
                     {stayed && ops.length === 0 && <span className="gate-step-count">NOT USED</span>}
@@ -262,78 +249,60 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
                     </span>
                   )}
 
-                  <div className="gate-tools">
-                    {ops.map(op => (
-                      <button
-                        key={op.id}
-                        type="button"
-                        className="gate-tool"
-                        data-on={switchState(state.get(op.id))}
-                        aria-pressed={why?.id === op.id}
-                        onClick={() => pick(op.id, op.rationale || op.blurb)}
-                      >
-                        <i className="gate-tool-dot" style={{ background: WING_INK[op.wing] }} />
-                        {plainName(op.id, op.name)}
-                      </button>
-                    ))}
+                  {ops.length === 0 ? (
+                    <p className="gate-none">
+                      {isWeb
+                        ? 'The planner read your sentence and found nothing worth checking outside.'
+                        : 'Nothing in this step for this sentence.'}
+                    </p>
+                  ) : (
+                    <ul className="gate-rack">
+                      {ops.map(op => {
+                        const resolved = state.get(op.id)
+                        const on = switchState(resolved)
+                        const name = plainName(op.id, op.name)
+                        return (
+                          <li key={op.id} className="gate-rack-row" data-on={on}>
+                            <button
+                              type="button"
+                              className="gate-rack-read"
+                              aria-pressed={why?.id === op.id}
+                              onClick={() =>
+                                pick(
+                                  op.id,
+                                  on === 'held' && resolved
+                                    ? `${name} is held back: it reads ${listOf(resolved.blockedBy)}, and ${resolved.blockedBy.length > 1 ? 'those are' : 'that is'} switched off.`
+                                    : op.rationale || op.blurb,
+                                )
+                              }
+                            >
+                              <i
+                                className="gate-rack-spine"
+                                style={{ background: WING_INK[op.wing] }}
+                              />
+                              <span className="gate-rack-name" title={name}>
+                                {name}
+                              </span>
+                              <span className="gate-rack-id">{op.id}</span>
+                            </button>
 
-                    {ops.length === 0 && (
-                      <span className="gate-none">
-                        {isWeb
-                          ? 'The planner read your sentence and found nothing worth checking outside.'
-                          : 'Nothing in this step for this sentence.'}
-                      </span>
-                    )}
-                  </div>
-
-                  {ops.length > 0 && (
-                    <button
-                      type="button"
-                      className="gate-open"
-                      aria-expanded={open}
-                      onClick={() => toggleStep(step.id)}
-                    >
-                      <i className="gate-open-mark" />
-                      {open ? 'CLOSE' : `${ops.length} SWITCHES`}
-                    </button>
+                            <button
+                              type="button"
+                              role="switch"
+                              aria-checked={on === 'on'}
+                              aria-label={`${name}, ${on === 'on' ? 'on' : on === 'held' ? 'held back' : 'off'}`}
+                              className="gate-rack-switch"
+                              data-on={on}
+                              disabled={locked || on === 'held'}
+                              onClick={() => flip(op)}
+                            >
+                              <i className="gate-rack-box" />
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
                   )}
-
-                  <div className="gate-menu" data-open={open}>
-                    <div className="gate-menu-clip">
-                      <ul className="gate-menu-list">
-                        {ops.map((op, i) => {
-                          const resolved = state.get(op.id)
-                          const on = switchState(resolved)
-                          return (
-                            <li key={op.id} style={{ '--i': i } as React.CSSProperties}>
-                              <button
-                                type="button"
-                                role="switch"
-                                aria-checked={on === 'on'}
-                                className="gate-switch"
-                                data-on={on}
-                                disabled={locked || on === 'held'}
-                                onClick={() => flip(op)}
-                              >
-                                <i className="gate-switch-box" />
-                                {/* Two columns per step means a long name truncates. The
-                                    full one is one hover away rather than gone. */}
-                                <span className="gate-switch-name" title={plainName(op.id, op.name)}>
-                                  {plainName(op.id, op.name)}
-                                </span>
-                                <span className="gate-switch-id">{op.id}</span>
-                                <span className="gate-switch-why">
-                                  {on === 'held' && resolved
-                                    ? `Held back: it reads ${listOf(resolved.blockedBy)}.`
-                                    : op.blurb}
-                                </span>
-                              </button>
-                            </li>
-                          )
-                        })}
-                      </ul>
-                    </div>
-                  </div>
                 </section>
               </Fragment>
             )
@@ -369,16 +338,8 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
           </DitherButton>
         )}
 
-        <button
-          type="button"
-          className="gate-drop"
-          onClick={() => setOpened(allOpen ? new Set() : new Set(STEPS.map(step => step.id)))}
-        >
-          {allOpen ? 'Hide every switch' : 'Or see every tool and its switch'}
-        </button>
-
-        <a className="gate-graph" href={`/gate/${batchId}?detail=1`}>
-          As a graph
+        <a className="gate-drop" href={`/gate/${batchId}?detail=1`}>
+          Or see the whole graph, with what feeds what
         </a>
 
         {error ? (

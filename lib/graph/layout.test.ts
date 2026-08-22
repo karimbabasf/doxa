@@ -4,8 +4,10 @@ import {
   addNode,
   bounds,
   createLayout,
+  motion,
   restLength,
   separate,
+  settle as settleUntilStill,
   step,
 } from './layout'
 
@@ -146,10 +148,89 @@ describe('bounds', () => {
 
   it('includes each node radius, so framing never clips a specimen', () => {
     const box = bounds([
-      { id: 'a', x: 0, y: 0, vx: 0, vy: 0, r: 10, pinned: false },
-      { id: 'b', x: 100, y: 50, vx: 0, vy: 0, r: 20, pinned: false },
+      { id: 'a', x: 0, y: 0, vx: 0, vy: 0, r: 10, pinned: false, group: 0, homeX: 0, homeY: 0 },
+      { id: 'b', x: 100, y: 50, vx: 0, vy: 0, r: 20, pinned: false, group: 0, homeX: 0, homeY: 0 },
     ])
     expect(box).toEqual({ minX: -10, minY: -10, maxX: 120, maxY: 70 })
+  })
+})
+
+describe('settle', () => {
+  it('stops the picture rather than leaving it twitching', () => {
+    const { layout } = trio()
+    const steps = settleUntilStill(layout)
+    expect(steps).toBeLessThan(2000)
+    expect(motion(layout)).toBeLessThan(0.008)
+  })
+
+  it('holds still once it has settled, so a chart nobody touches does not shake', () => {
+    const vectors = [onCircle(0), onCircle(4), onCircle(9), onCircle(140), onCircle(146)]
+    const layout = createLayout(['a', 'b', 'c', 'd', 'e'], vectors, [48, 48, 48, 48, 48])
+    settleUntilStill(layout)
+    const before = layout.nodes.map((n) => ({ x: n.x, y: n.y }))
+    for (let i = 0; i < 240; i++) step(layout)
+    // Four more seconds of stepping moves the picture by less than a plate's border.
+    // The chart stops stepping entirely at this point, so this is the margin, not the
+    // motion anybody sees.
+    layout.nodes.forEach((n, i) => {
+      expect(Math.hypot(n.x - before[i].x, n.y - before[i].y)).toBeLessThan(3)
+    })
+  })
+
+  it('never asks a spring to pull two plates closer than the separator will allow', () => {
+    // Big plates and near-identical opinions: the pair the old standoff was made of.
+    const layout = createLayout(['a', 'b'], [onCircle(0), onCircle(2)], [54, 54], { k: 1 })
+    settleUntilStill(layout)
+    const [a, b] = layout.nodes
+    const need = a.r + b.r + layout.options.collidePad
+    expect(Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y))).toBeGreaterThanOrEqual(
+      need - 1,
+    )
+  })
+})
+
+describe('groups', () => {
+  /** Two subjects, three opinions each, near-identical inside and far apart across. */
+  function twoSubjects() {
+    const vectors = [
+      onCircle(0),
+      onCircle(4),
+      onCircle(9),
+      onCircle(150),
+      onCircle(155),
+      onCircle(159),
+    ]
+    return createLayout(['a', 'b', 'c', 'd', 'e', 'f'], vectors, [22, 22, 22, 22, 22, 22])
+  }
+
+  it('puts the two subjects in two clumps', () => {
+    const layout = twoSubjects()
+    const groups = layout.nodes.map((n) => n.group)
+    expect(new Set(groups).size).toBe(2)
+    expect(groups[0]).toBe(groups[2])
+    expect(groups[3]).toBe(groups[5])
+    expect(groups[0]).not.toBe(groups[3])
+  })
+
+  it('settles with clear space between the clumps, which is the whole picture', () => {
+    const layout = twoSubjects()
+    settleUntilStill(layout)
+
+    const within: number[] = []
+    const between: number[] = []
+    for (let i = 0; i < layout.nodes.length; i++) {
+      for (let j = i + 1; j < layout.nodes.length; j++) {
+        const a = layout.nodes[i]
+        const b = layout.nodes[j]
+        ;(a.group === b.group ? within : between).push(distanceBetween(a, b))
+      }
+    }
+
+    const worstWithin = Math.max(...within)
+    const closestBetween = Math.min(...between)
+    // Not on average: the widest pair inside a clump is still closer together than the
+    // nearest pair across clumps. That is what makes a clump read as a clump.
+    expect(closestBetween).toBeGreaterThan(worstWithin)
   })
 })
 
@@ -162,6 +243,9 @@ describe('separate', () => {
     vy: 0,
     r,
     pinned: false,
+    group: 0,
+    homeX: 0,
+    homeY: 0,
   })
 
   /** Square plates clear each other when EITHER axis is clear. */

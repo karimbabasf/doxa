@@ -2388,6 +2388,47 @@ button:active,
   color: var(--ink-faint);
 }
 
+/* The four ways to sort the chart. Buttons, not a dropdown: there are four of them and
+   they are the point of the screen, so they cost nothing sitting in the open. */
+.chart-ways {
+  display: flex;
+  gap: 2px;
+  margin-left: auto;
+  pointer-events: auto;
+}
+
+.chart-way {
+  padding: 6px 11px;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  background: none;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+  cursor: pointer;
+  transition:
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.chart-way:hover {
+  color: var(--ink-dim);
+  background: var(--ground-raised);
+}
+
+.chart-way:active {
+  transform: scale(0.96);
+}
+
+.chart-way[aria-pressed='true'] {
+  color: var(--ink);
+  border-color: var(--rule-bright);
+  background: var(--ground-raised);
+}
+
 .chart-wrap {
   position: absolute;
   inset: 0;
@@ -2403,6 +2444,24 @@ button:active,
 
 .chart-canvas:active {
   cursor: grabbing;
+}
+
+/* The line under the chart changes with the arrangement, so it fades rather than swaps. */
+.chart-hint {
+  animation: chart-said-in 260ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+@keyframes chart-said-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-hint {
+    animation: none;
+  }
 }
 
 .chart-hint,

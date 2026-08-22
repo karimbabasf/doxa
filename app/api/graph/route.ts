@@ -28,6 +28,22 @@ export type ChartTool = {
   healed?: string
 }
 
+/**
+ * The numbers the chart can arrange by, all read off what the run measured.
+ *
+ * One value per axis, already on a fixed scale, because the scale is a claim: an opinion
+ * that is mildly positive must not fill the happy end of the screen just because it happens
+ * to be the happiest one in the set that day.
+ */
+export type ChartSort = {
+  /** How it feels, from -1 hostile to 1 warm. */
+  feeling: number
+  /** How sure it sounds, from 0 hedged to 1 flat certain. */
+  certainty: number
+  /** When it was put through, in milliseconds. */
+  time: number
+}
+
 export type ChartNode = {
   id: string
   opinion: string
@@ -40,6 +56,7 @@ export type ChartNode = {
   missing: string[]
   /** Real operations performed, summed across the run. */
   ops: number
+  sort: ChartSort
 }
 
 type BatchRow = { id: string; opinion: string; created_at: string; embedding: string | null }
@@ -146,10 +163,73 @@ export async function GET() {
       tools,
       missing,
       ops: tools.reduce((sum, t) => sum + t.ops, 0),
+      sort: {
+        feeling: feelingOf(results),
+        certainty: certaintyOf(results),
+        time: Date.parse(batch.created_at) || 0,
+      },
     })
   }
 
   return NextResponse.json({ nodes })
+}
+
+/** The reading a tool wrote under one key, when it wrote a number there. */
+function reading(results: OperatorResult[], id: string, key: string): number | undefined {
+  const value = results.find((r) => r.id === id)?.readings?.[key]
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+}
+
+const clamp = (value: number, low: number, high: number) =>
+  Math.max(low, Math.min(high, value))
+
+/**
+ * How the opinion feels, from -1 hostile to 1 warm.
+ *
+ * Two tools measured this and they measure different things: the mood of the words as they
+ * run past, and which side the sentence takes. Averaged where both reported, because either
+ * alone is thin. Zero when neither ran, which puts the opinion in the middle, where an
+ * opinion nobody measured belongs.
+ */
+function feelingOf(results: OperatorResult[]): number {
+  const parts: number[] = []
+
+  const valence = reading(results, 'VALENCE-ARC', 'netValence')
+  if (valence !== undefined) parts.push(clamp(valence, -1, 1))
+
+  const side = results.find((r) => r.id === 'STANCE')?.readings
+  const confidence = typeof side?.confidence === 'number' ? clamp(side.confidence, 0, 1) : 0.5
+  if (side?.stance === 'for') parts.push(confidence)
+  else if (side?.stance === 'against') parts.push(-confidence)
+  else if (side?.stance) parts.push(0)
+
+  if (parts.length === 0) return 0
+  return parts.reduce((sum, p) => sum + p, 0) / parts.length
+}
+
+/**
+ * How sure the opinion sounds, from 0 hedged to 1 flat certain.
+ *
+ * One reading leads and the other two adjust it. Averaging all three was tried first and it
+ * pushed every opinion into the middle of the screen: most sentences use no hedges and no
+ * modal verbs, so those two readings are zero for nearly everybody and an average with two
+ * constants in it is mostly a constant. The stance tool's own confidence is the reading that
+ * actually varies, so it sets the place and the other two move it a little.
+ */
+function certaintyOf(results: OperatorResult[]): number {
+  const confidence = reading(results, 'STANCE', 'confidence')
+  if (confidence === undefined) return 0.5
+
+  // Conviction is a count of softeners against boosters, so it has no natural top. Folded
+  // onto the scale at five of either, which is a lot of hedging for one sentence.
+  const conviction = reading(results, 'HEDGE-7', 'netConviction') ?? 0
+  const modal = reading(results, 'MODALITY', 'modalForce') ?? 0
+
+  return clamp(
+    clamp(confidence, 0, 1) + clamp(conviction / 5, -1, 1) * 0.15 + clamp(modal, 0, 1) * 0.15,
+    0,
+    1,
+  )
 }
 
 /**
