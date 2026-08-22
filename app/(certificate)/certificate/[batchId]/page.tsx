@@ -717,9 +717,10 @@ export default async function CertificatePage({ params }: RouteProps) {
 
       <footer className="mt-12 border-t border-rule-bright pt-3 text-ink-faint">
         <p>
+          {/* TORN OUT 2026-08-22: the second sentence described the specimen. It comes back
+              with section 06. */}
           Struck by DOXA for batch {batch.id}. Every reading on this page comes from the run that
-          produced it. The specimen is a function of the parameters above and the seed, so the same
-          work order strikes the same specimen again.
+          produced it.
         </p>
       </footer>
     </main>
