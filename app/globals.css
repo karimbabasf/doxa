@@ -1420,58 +1420,6 @@ button:active,
   }
 }
 
-/* ---------------------------------------------------------------------------
-   The wait budget on the gate.
-
-   One stacked bar, one segment per layer, each as wide as that layer's slowest
-   instrument. That is how `plan.ts` builds the total, so the bar and the number
-   in the footer are the same arithmetic drawn two ways and cannot disagree.
-
-   Two pixels of ground between segments, so a run of layers reads as counted
-   rather than poured. Labels are dropped rather than squeezed when a segment is
-   too narrow to hold one; the reason strip still has the full reading.
-   --------------------------------------------------------------------------- */
-
-.budget {
-  flex: 0 0 auto;
-  padding-bottom: 26px;
-}
-
-.budget-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 9px;
-}
-
-.budget-cap {
-  font-size: 10px;
-  letter-spacing: 0.16em;
-  color: var(--ink-faint);
-}
-
-.budget-total {
-  font-size: 11px;
-  color: var(--ink-dim);
-  font-variant-numeric: tabular-nums;
-}
-
-/* The plot box. dither-kit fills its parent, so the height lives here rather
-   than inside a chart that should be reusable at any size. */
-.budget-plot {
-  height: 132px;
-}
-
-.budget-note {
-  margin: 11px 0 0;
-  font-family: var(--font-sans-stack);
-  font-size: 11.5px;
-  line-height: 1.5;
-  color: var(--ink-faint);
-  text-wrap: pretty;
-}
-
 /* -- the step header, and the step the planner decided against ------------- */
 
 .gate-step-bar {
@@ -1982,6 +1930,12 @@ button:active,
 .floor-tool[data-state='skipped'] {
   opacity: 0.4;
   text-decoration: line-through;
+}
+
+.floor-t {
+  font-weight: 400;
+  color: var(--state-live);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The run has no button to press, so the primary slot holds its state instead

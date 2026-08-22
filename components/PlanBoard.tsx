@@ -11,7 +11,6 @@ import {
 } from '@/lib/planLanguage'
 import { DitherButton } from './dither-kit'
 import type { GateOperator } from './OperatorCard'
-import WaitBudget from './WaitBudget'
 
 /**
  * The plan, on one screen, for a person who has never seen this before.
@@ -114,8 +113,6 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
           <div className="gate-cap">YOU SAID</div>
           <blockquote>{opinion}</blockquote>
         </div>
-
-        <WaitBudget operators={running} />
 
         <div className="gate-cap">CLICK ANY TOOL TO SEE WHY IT WAS PICKED</div>
 

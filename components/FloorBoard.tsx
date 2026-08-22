@@ -58,7 +58,7 @@ function secs(ms: number): string {
 }
 
 export default function FloorBoard({ batchId }: Props) {
-  const { rows, opinion, totalOps, summary, alarm, fatal, liveCount, settled, elapsed } =
+  const { rows, opinion, totalOps, summary, alarm, fatal, now, liveCount, settled, elapsed } =
     useFloorRun(batchId)
 
   const byStep = useMemo(() => {
@@ -177,17 +177,24 @@ export default function FloorBoard({ batchId }: Props) {
                 </span>
 
                 <div className="gate-tools floor-tools">
-                  {ops.map(op => (
-                    <span
-                      key={op.id}
-                      className="gate-tool floor-tool"
-                      data-state={op.state}
-                      title={op.name}
-                    >
-                      <i className="floor-dot" style={{ background: DOT[op.state] }} />
-                      {plainName(op.id, op.name)}
-                    </span>
-                  ))}
+                  {ops.map(op => {
+                    const running =
+                      op.state === 'live' && op.startedAt ? Math.max(0, now - op.startedAt) : null
+                    return (
+                      <span
+                        key={op.id}
+                        className="gate-tool floor-tool"
+                        data-state={op.state}
+                        title={op.name}
+                      >
+                        <i className="floor-dot" style={{ background: DOT[op.state] }} />
+                        {plainName(op.id, op.name)}
+                        {running !== null && (
+                          <b className="floor-t">{(running / 1000).toFixed(1)}s</b>
+                        )}
+                      </span>
+                    )
+                  })}
 
                   {isPrint && (
                     <>
