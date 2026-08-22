@@ -676,20 +676,31 @@ button:active,
    One track, the list on it twice, moved by half its own height forever. Half is
    exactly one copy, so the loop point is a row boundary no matter what the rows
    measure, and no JavaScript has to know a pixel height.
+
+   Every line is a box. A bare line of text on a moving column reads as a caption,
+   and nobody tries to click a caption. Eight boxes sit in the window at once, out of
+   a pool of twenty two, so the column reads as a supply with more in it than the
+   screen can hold rather than a short list going round.
    --------------------------------------------------------------------------- */
 
 .suggest {
-  --suggest-row: 34px;
+  /* Box plus the gap under it. The two must sum to the row, or the loop drifts. */
+  --suggest-box: 40px;
+  --suggest-gap: 8px;
+  --suggest-row: calc(var(--suggest-box) + var(--suggest-gap));
   position: relative;
-  height: calc(var(--suggest-row) * 3);
+  height: calc(var(--suggest-row) * 8);
   overflow: hidden;
-  /* Rows dissolve at the edges. A hard cut would read as a clipped list. */
-  mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+  /*
+   * A short fade at each edge only. The boxes have to stay legible, so this hides
+   * the cut without dimming the four that are meant to be read.
+   */
+  mask-image: linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 6%, #000 94%, transparent);
 }
 
 .suggest-track {
-  animation: suggest-roll var(--suggest-dur, 30s) linear infinite;
+  animation: suggest-roll var(--suggest-dur, 50s) linear infinite;
   will-change: transform;
 }
 
@@ -712,27 +723,31 @@ button:active,
   position: relative;
   display: block;
   width: 100%;
-  height: var(--suggest-row);
-  padding: 0 0 0 22px;
-  border: 0;
-  background: none;
+  height: var(--suggest-box);
+  margin-bottom: var(--suggest-gap);
+  padding: 0 14px 0 26px;
+  border: 1px solid var(--rule);
+  background: var(--ground-raised);
   font-family: var(--font-sans-stack);
   font-size: 12.5px;
-  line-height: var(--suggest-row);
+  line-height: calc(var(--suggest-box) - 2px);
   text-align: left;
-  color: var(--ink-faint);
+  color: var(--ink-dim);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
-  transition: color var(--dur-tip) var(--ease-out);
+  transition:
+    color var(--dur-tip) var(--ease-out),
+    border-color var(--dur-tip) var(--ease-out),
+    background-color var(--dur-tip) var(--ease-out);
 }
 
 /* The tick draws itself out of the left gutter. A hairline, never a glow. */
 .suggest-row::before {
   content: '';
   position: absolute;
-  left: 0;
+  left: 10px;
   top: 50%;
   width: 0;
   height: 1px;
@@ -743,18 +758,25 @@ button:active,
 .suggest-row:hover,
 .suggest-row:focus-visible {
   color: var(--ink);
+  border-color: var(--rule-bright);
+  background: var(--ground);
   outline: none;
+}
+
+.suggest-row:focus-visible {
+  border-color: var(--signal);
 }
 
 .suggest-row:hover::before,
 .suggest-row:focus-visible::before {
-  width: 14px;
+  width: 10px;
 }
 
-/* The press scale from the base sheet would shift a line mid roll. Not here. */
+/* The press scale from the base sheet would shift a box mid roll. Not here. */
 .suggest-row:active {
   transform: none;
-  color: var(--signal);
+  border-color: var(--signal);
+  color: var(--ink);
 }
 
 /*
@@ -766,7 +788,7 @@ button:active,
 @media (prefers-reduced-motion: reduce) {
   .suggest {
     height: auto;
-    max-height: calc(var(--suggest-row) * 5);
+    max-height: calc(var(--suggest-row) * 9);
     overflow-y: auto;
     mask-image: none;
     -webkit-mask-image: none;

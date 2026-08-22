@@ -42,6 +42,54 @@ const PRIMITIVES_PER_PRODUCT = 12
  *  a path claimed only at zero weight, and that loses the specimen. */
 const MIN_WEIGHT = 0.05
 
+/**
+ * The collector returns price as `{ value, currency, symbol }`, not as the text on the
+ * page. Flattened to the string a human reads, so the certificate quotes "$14.50" and
+ * `money` below still parses it. An absent price is left absent rather than filled with
+ * an empty string, so the gate names the missing field instead of the empty one.
+ */
+function priceCell(value: unknown): string {
+  if (value === null || value === undefined) return ''
+  if (typeof value === 'object') {
+    const box = value as { value?: unknown; symbol?: unknown }
+    if (box.value === null || box.value === undefined) return ''
+    return `${typeof box.symbol === 'string' ? box.symbol : ''}${box.value}`
+  }
+  return String(value)
+}
+
+/**
+ * This collector returns one row per page with the products nested under it, the same
+ * convention PRIOR-ART uses and the opposite of CORROBORATE's. A row that already looks
+ * flat passes through untouched, so the operator survives a collector rebuilt the other
+ * way. The hook runs on every attempt, the verify scrape included, so a nested collector
+ * cannot skip the gate on the one scrape that proves a repair held.
+ */
+export function flattenProducts(rows: unknown[]): unknown[] {
+  const out: unknown[] = []
+  for (const raw of rows) {
+    if (raw === null || typeof raw !== 'object') {
+      out.push(raw)
+      continue
+    }
+    const page = raw as Record<string, unknown>
+    if (!Array.isArray(page.products)) {
+      out.push(raw)
+      continue
+    }
+    for (const item of page.products) {
+      if (item === null || typeof item !== 'object') {
+        out.push(item)
+        continue
+      }
+      const row = { ...(item as Record<string, unknown>) }
+      if ('price' in row) row.price = priceCell(row.price)
+      out.push(row)
+    }
+  }
+  return out
+}
+
 /** "$14.50" -> 14.5. A cell the collector could not fill reads as NaN and gets dropped. */
 function money(cell: string): number {
   const n = Number(String(cell).replace(/[^0-9.]/g, ''))
@@ -83,7 +131,7 @@ export const DEMO_SHOP: Operator = {
       // Six products fit inside the synchronous endpoint's cap easily, so this scrape
       // answers in seconds instead of dropping into batch polling. It is the difference
       // between a repair beat of about a minute and one of four to six.
-      { mustVary: MUST_VARY, sync: true },
+      { mustVary: MUST_VARY, sync: true, flatten: flattenProducts },
     )
 
     const rows: Row[] = scrape.rows

@@ -29,10 +29,23 @@ const SAMPLES = [
   'Most meetings are a request for permission wearing the clothes of a request for input.',
   'Typography is the only part of design a reader feels without ever looking at it.',
   'Every company that says it is data driven means it is driven by the four numbers it happens to collect.',
+  'San Francisco is the only city where being early is worth more than being right.',
+  'A startup that needs to explain its own name has already lost the first ten seconds.',
+  'Nobody has ever read the terms of service, and the whole industry is built on knowing that.',
+  'Standardised testing measures how well a fifteen year old handles a deadline, and nothing else.',
+  'The best writing advice is to cut the first paragraph, because that is where the throat clearing lives.',
+  'Crypto solved trust between strangers and then spent ten years looking for strangers who needed it.',
+  'A tool that saves an hour a week is worth more than one that saves a day once.',
+  'Any recruiter who asks where you see yourself in five years is testing whether you will lie politely.',
+  'The comment section was the last honest part of the internet and every platform killed it on purpose.',
+  'Public transport is the only infrastructure a city cannot fake with a press release.',
+  'Every productivity app is a todo list with an opinion about your character.',
+  'A photograph of a meal has never once made the meal taste better.',
+  'The people who understand a system best are the ones paid least to run it.',
 ]
 
 /** Seconds of travel per row. Slow enough to finish a sentence before it leaves. */
-const ROW_SECONDS = 3.5
+const ROW_SECONDS = 3.2
 
 export default function HomePage() {
   const [text, setText] = useState('')
@@ -92,9 +105,9 @@ export default function HomePage() {
         </Link>
       </div>
       <p className="prose-sans mt-3 max-w-xl text-ink-dim" style={{ fontSize: '13px' }}>
-        An opinion goes in. A planner agent picks the instruments that suit that exact text and
-        writes down why it picked each one. You read the plan and sign it. The line runs under
-        tracing and strikes one dithered specimen with a certificate of every operation performed.
+        You type one opinion, a robot writes a custom analysis plan for that exact sentence, you
+        approve it, the plan runs as a visible factory line, and it prints a one of a kind image
+        plus a receipt of every measurement.
       </p>
 
       <label htmlFor="opinion" className="mt-10 block text-[10px] tracking-[0.16em] text-ink-faint">
@@ -156,9 +169,13 @@ export default function HomePage() {
         height, so the seam lands on a row boundary whatever the rows measure. Hover and
         keyboard focus both stop it: nobody can reliably hit a moving target, and a
         suggestion nobody can click is decoration.
+
+        Each line is boxed. A bare line of text on a moving column reads as a caption, and
+        a caption is not something a person tries to click.
       */}
+      <h2 className="mt-12 text-[10px] tracking-[0.16em] text-ink-faint">OR CHOOSE ONE</h2>
       <section
-        className="suggest mt-12"
+        className="suggest mt-3"
         aria-label="Sample opinions"
         style={{ ['--suggest-dur' as string]: `${SAMPLES.length * ROW_SECONDS}s` }}
       >
