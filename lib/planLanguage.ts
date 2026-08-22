@@ -54,13 +54,16 @@ export const STEPS: Step[] = [
     line: 'They disagree. What came from the web wins.',
     wings: ['semantics', 'esoteric'],
   },
-  {
-    id: 'print',
-    n: 'STEP 4',
-    title: 'Print it',
-    line: 'One image nobody else gets, plus a receipt.',
-    wings: [],
-  },
+  // TORN OUT 2026-08-22: the print step is the image, and the image is being rebuilt.
+  // The gate and the floor both read this list, so the run now signs for and shows three
+  // steps. `StepId` keeps 'print' so the screens that branch on it still typecheck.
+  // {
+  //   id: 'print',
+  //   n: 'STEP 4',
+  //   title: 'Print it',
+  //   line: 'One image nobody else gets, plus a receipt.',
+  //   wings: [],
+  // },
 ]
 
 /** Operator id to the name a stranger reads. Anything unlisted falls back to its own name. */

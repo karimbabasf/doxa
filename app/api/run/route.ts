@@ -1,10 +1,14 @@
 import type { Database as Db } from 'better-sqlite3'
 import { gateDb } from '@/app/api/plan/db'
-import { getWorkOrder, insertResult, insertSpecimen, setBatchEmbedding } from '@/lib/db'
+import { getWorkOrder, insertResult, setBatchEmbedding } from '@/lib/db'
 import { executeRun, type FloorEvent, type RunOpts } from '@/lib/executor/run'
 import { layer } from '@/lib/executor/topo'
-import { mergeContributions, type Attribution } from '@/lib/foundry/merge'
-import type { Ctx, Operator, OperatorResult, RenderParams, Wing } from '@/lib/types'
+// TORN OUT 2026-08-22: the specimen is being rebuilt from scratch, so the run no longer
+// merges contributions or writes a specimen row. Restore these two imports with the block
+// at the end of the stream below.
+// import { insertSpecimen } from '@/lib/db'
+// import { mergeContributions, type Attribution } from '@/lib/foundry/merge'
+import type { Ctx, Operator, OperatorResult, Wing } from '@/lib/types'
 import { initTracing, startBatch, type BatchTrace } from '@/lib/tracing'
 
 export const runtime = 'nodejs'
@@ -33,8 +37,9 @@ export type StreamEvent =
   | { kind: 'note'; id: string; text: string }
   | {
       kind: 'complete'
-      params: RenderParams
-      attribution: Attribution
+      // TORN OUT 2026-08-22: the two render fields go back here when the specimen returns.
+      // params: RenderParams
+      // attribution: Attribution
       totalOps: number
       totalMs: number
       failed: string[]
@@ -141,7 +146,8 @@ export async function handleRun(body: unknown, deps: RunDeps): Promise<Response>
 
   const concurrency = deps.concurrency ?? DEFAULT_CONCURRENCY
   const roster = rosterOf(layered)
-  const wings: Record<string, Wing> = Object.fromEntries(ops.map((o) => [o.id, o.wing]))
+  // TORN OUT 2026-08-22: the wing map was only ever an argument to the merge.
+  // const wings: Record<string, Wing> = Object.fromEntries(ops.map((o) => [o.id, o.wing]))
   const ctx: Ctx = { opinion: stored.order.opinion, batchId, results: new Map() }
 
   const stream = new ReadableStream<Uint8Array>({
@@ -177,26 +183,31 @@ export async function handleRun(body: unknown, deps: RunDeps): Promise<Response>
           },
         })
 
-        const results = roster.flatMap((row) => {
-          const result = ctx.results.get(row.id)
-          return result ? [result] : []
-        })
+        // TORN OUT 2026-08-22: only the merge read this roll-up.
+        // const results = roster.flatMap((row) => {
+        //   const result = ctx.results.get(row.id)
+        //   return result ? [result] : []
+        // })
 
-        let merged
-        try {
-          merged = mergeContributions(results, { wings })
-        } catch (err) {
-          // No specimen. A specimen part built from defaults would misreport what was measured,
-          // so the floor says which parameters nobody measured and stops there.
-          send({ kind: 'fail', id: 'MERGE', ms: run.totalMs, error: messageOf(err) })
-          return
-        }
-
-        insertSpecimen(deps.db, batchId, merged.params, merged.attribution)
+        // TORN OUT 2026-08-22: the merge and the specimen write are being rebuilt. The run
+        // now ends when the last operator lands, so `results` and `wings` are unused until
+        // the block below comes back.
+        //
+        // let merged
+        // try {
+        //   merged = mergeContributions(results, { wings })
+        // } catch (err) {
+        //   // No specimen. A specimen part built from defaults would misreport what was measured,
+        //   // so the floor says which parameters nobody measured and stops there.
+        //   send({ kind: 'fail', id: 'MERGE', ms: run.totalMs, error: messageOf(err) })
+        //   return
+        // }
+        //
+        // insertSpecimen(deps.db, batchId, merged.params, merged.attribution)
         send({
           kind: 'complete',
-          params: merged.params,
-          attribution: merged.attribution,
+          // params: merged.params,
+          // attribution: merged.attribution,
           totalOps: run.totalOps,
           totalMs: run.totalMs,
           failed: run.failed,

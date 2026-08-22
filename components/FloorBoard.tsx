@@ -1,8 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
-import type { GraphNode } from '@/app/api/graph/route'
-import { GraphCanvas } from '@/components/graph/GraphCanvas'
+import { useMemo } from 'react'
+// TORN OUT 2026-08-22: the graph is being rebuilt, so the floor no longer ends on it.
+// import { useEffect, useState } from 'react'
+// import type { GraphNode } from '@/app/api/graph/route'
+// import { GraphCanvas } from '@/components/graph/GraphCanvas'
 import { STEPS, plainName, readingOrder, type StepId } from '@/lib/planLanguage'
 import { ValueFlash } from './interior/value-flash'
 import { useFloorRun, type Row, type RowState } from './useFloorRun'
@@ -56,7 +58,7 @@ function secs(ms: number): string {
 }
 
 export default function FloorBoard({ batchId }: Props) {
-  const { rows, opinion, totalOps, summary, alarm, fatal, now, liveCount, settled, elapsed } =
+  const { rows, opinion, totalOps, summary, alarm, fatal, liveCount, settled, elapsed } =
     useFloorRun(batchId)
 
   const byStep = useMemo(() => {
@@ -75,26 +77,28 @@ export default function FloorBoard({ batchId }: Props) {
 
   const done = Boolean(summary)
 
-  // Every opinion the factory has finished, fetched once this run lands. The run
-  // completing is what admits this batch to the graph, so the fetch waits for the
-  // specimen rather than racing it. A failure leaves the four steps on screen,
-  // which is a quieter ending than the graph but never a broken one.
-  const [graph, setGraph] = useState<GraphNode[] | null>(null)
-  const [reading, setReading] = useState<string | null>(null)
-
-  useEffect(() => {
-    if (!summary) return
-    let live = true
-    fetch('/api/graph')
-      .then(res => res.json())
-      .then((body: { nodes?: GraphNode[] }) => {
-        if (live && body.nodes) setGraph(body.nodes)
-      })
-      .catch(() => {})
-    return () => {
-      live = false
-    }
-  }, [summary])
+  // TORN OUT 2026-08-22: the graph the floor ended on is being rebuilt.
+  //
+  // // Every opinion the factory has finished, fetched once this run lands. The run
+  // // completing is what admits this batch to the graph, so the fetch waits for the
+  // // specimen rather than racing it. A failure leaves the four steps on screen,
+  // // which is a quieter ending than the graph but never a broken one.
+  // const [graph, setGraph] = useState<GraphNode[] | null>(null)
+  // const [reading, setReading] = useState<string | null>(null)
+  //
+  // useEffect(() => {
+  //   if (!summary) return
+  //   let live = true
+  //   fetch('/api/graph')
+  //     .then(res => res.json())
+  //     .then((body: { nodes?: GraphNode[] }) => {
+  //       if (live && body.nodes) setGraph(body.nodes)
+  //     })
+  //     .catch(() => {})
+  //   return () => {
+  //     live = false
+  //   }
+  // }, [summary])
 
   return (
     <main className="gate floor">
@@ -113,38 +117,36 @@ export default function FloorBoard({ batchId }: Props) {
         </div>
 
         {fatal && <p className="gate-missing">The run did not start. {fatal}</p>}
-        {alarm && <p className="gate-missing">No image was made. {alarm}</p>}
+        {/* TORN OUT 2026-08-22: the alarm named the image. The merge no longer runs, so this
+            only fires for a failure of the run itself. */}
+        {alarm && <p className="gate-missing">The run stopped. {alarm}</p>}
 
         <div className="gate-cap">
-          {done
-            ? graph === null
-              ? 'EVERY STEP FINISHED. STRIKING THE IMAGE.'
-              : graph.length < 2
-                ? 'THE FIRST OPINION IN THE GRAPH.'
-                : `THIS OPINION NOW SITS AMONG ${graph.length - 1} OTHERS.`
-            : 'THE STEPS YOU SIGNED FOR, HAPPENING NOW'}
+          {done ? 'EVERY STEP FINISHED.' : 'THE STEPS YOU SIGNED FOR, HAPPENING NOW'}
         </div>
 
         {/*
-          The four steps are the wait. Once the image is struck they have nothing left
-          to say, so the screen stops reporting this run and answers what the run was
-          for: where this opinion landed among every other one. That was three clicks
-          away on another screen before.
+          TORN OUT 2026-08-22: the graph ending. The steps stay on screen after the run
+          lands until the new graph is built.
+
+          {done && graph !== null ? (
+            <div className="floor-graph">
+              <GraphCanvas
+                nodes={graph}
+                selectedId={batchId}
+                onSelect={node => setReading(node?.opinion ?? null)}
+                admitted={graph.length}
+              />
+            </div>
+          ) : (
         */}
-        {done && graph !== null ? (
-          <div className="floor-graph">
-            <GraphCanvas
-              nodes={graph}
-              selectedId={batchId}
-              onSelect={node => setReading(node?.opinion ?? null)}
-              admitted={graph.length}
-            />
-          </div>
-        ) : (
         <div className="gate-line">
           {STEPS.map(step => {
             const ops = byStep.get(step.id) ?? []
             const isWeb = step.id === 'web'
+            // TORN OUT 2026-08-22: 'print' is no longer in STEPS, so this is always false.
+            // It stays as a named constant because the branches below read better with it
+            // and because the step comes back when the image does.
             const isPrint = step.id === 'print'
 
             // The print step has no operators of its own. It is waiting until the merge
@@ -175,24 +177,17 @@ export default function FloorBoard({ batchId }: Props) {
                 </span>
 
                 <div className="gate-tools floor-tools">
-                  {ops.map(op => {
-                    const running =
-                      op.state === 'live' && op.startedAt ? Math.max(0, now - op.startedAt) : null
-                    return (
-                      <span
-                        key={op.id}
-                        className="gate-tool floor-tool"
-                        data-state={op.state}
-                        title={op.name}
-                      >
-                        <i className="floor-dot" style={{ background: DOT[op.state] }} />
-                        {plainName(op.id, op.name)}
-                        {running !== null && (
-                          <b className="floor-t">{(running / 1000).toFixed(1)}s</b>
-                        )}
-                      </span>
-                    )
-                  })}
+                  {ops.map(op => (
+                    <span
+                      key={op.id}
+                      className="gate-tool floor-tool"
+                      data-state={op.state}
+                      title={op.name}
+                    >
+                      <i className="floor-dot" style={{ background: DOT[op.state] }} />
+                      {plainName(op.id, op.name)}
+                    </span>
+                  ))}
 
                   {isPrint && (
                     <>
@@ -219,21 +214,15 @@ export default function FloorBoard({ batchId }: Props) {
             )
           })}
         </div>
-        )}
 
         {/* One line, fixed height. What the web step is saying right now, or the summary. */}
         <div className={`gate-why${webNotes.length === 0 && !summary ? ' is-idle' : ''}`}>
-          <span className="gate-why-k">
-            {done && graph !== null ? 'THE GRAPH' : webNotes.length > 0 ? 'FROM THE WEB' : 'NOW'}
-          </span>
+          <span className="gate-why-k">{webNotes.length > 0 ? 'FROM THE WEB' : 'NOW'}</span>
           <span className="gate-why-v">
-            {done && graph !== null
-              ? (reading ??
-                'Every dot is the image its own run made, and the distance between two of them is how far apart the opinions are. Click any one to read it.')
-              : webNotes.length > 0
+            {webNotes.length > 0
               ? webNotes[webNotes.length - 1]
               : summary
-                ? `${settled} tools finished. ${summary.failed.length} failed, ${summary.skipped.length} skipped. The image was made from what the rest measured.`
+                ? `${settled} tools finished. ${summary.failed.length} failed, ${summary.skipped.length} skipped.`
                 : liveCount > 0
                   ? `${liveCount} ${liveCount === 1 ? 'tool is' : 'tools are'} working at the same time.`
                   : 'Waiting for the first tool to start.'}
@@ -244,7 +233,7 @@ export default function FloorBoard({ batchId }: Props) {
       <div className="gate-foot">
         {done ? (
           <a className="gate-sign" href={`/certificate/${batchId}`}>
-            SEE THE IMAGE AND THE RECEIPT
+            SEE THE RECEIPT
           </a>
         ) : (
           <span className="gate-sign is-waiting">

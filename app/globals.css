@@ -1984,12 +1984,6 @@ button:active,
   text-decoration: line-through;
 }
 
-.floor-t {
-  font-weight: 400;
-  color: var(--state-live);
-  font-variant-numeric: tabular-nums;
-}
-
 /* The run has no button to press, so the primary slot holds its state instead
    of pretending there is something to click. */
 .gate-sign.is-waiting {

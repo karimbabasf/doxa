@@ -87,10 +87,12 @@ export function FloorLine({ batchId }: { batchId: string }) {
       />
 
       {fatal ? <Banner tone="var(--state-fail)" title="The run did not start" body={fatal} /> : null}
+      {/* TORN OUT 2026-08-22: this banner named the specimen. The merge no longer runs, so
+          it only fires when the run itself fails. */}
       {alarm ? (
         <Banner
           tone="var(--state-fail)"
-          title="No specimen was struck"
+          title="The run stopped"
           body={alarm}
         />
       ) : null}
@@ -387,11 +389,13 @@ function LineRow({ row, now, delayMs }: { row: Row; now: number; delayMs: number
 }
 
 function Result({ summary }: { summary: Complete }) {
-  const paths = Object.entries(summary.attribution)
+  // TORN OUT 2026-08-22: the attribution list and the parameter line below belonged to the
+  // specimen. What is left is the run's own summary, which the readings still earn.
+  // const paths = Object.entries(summary.attribution)
   return (
     <section className="row-in mt-10 border border-rule bg-ground-raised p-5" style={{ animationDelay: '80ms' }}>
       <div className="flex flex-wrap items-baseline justify-between gap-4 border-b border-rule pb-3">
-        <h2 className="text-[11px] uppercase tracking-[0.26em] text-ink-dim">Specimen struck</h2>
+        <h2 className="text-[11px] uppercase tracking-[0.26em] text-ink-dim">Run finished</h2>
         <div className="flex gap-6">
           <div className="flex flex-col items-end">
             <ValueFlash
@@ -414,28 +418,31 @@ function Result({ summary }: { summary: Complete }) {
 
       {summary.failed.length > 0 || summary.skipped.length > 0 ? (
         <p className="mt-3 text-[12px] text-ink-dim">
-          {summary.failed.length} failed, {summary.skipped.length} skipped. The specimen was struck
-          from what the rest measured.
+          {summary.failed.length} failed, {summary.skipped.length} skipped.
         </p>
       ) : null}
 
-      <dl className="mt-4 grid gap-x-8 gap-y-1 sm:grid-cols-2">
-        {paths.map(([path, entry]) => (
-          <div key={path} className="flex items-baseline justify-between gap-4 border-b border-rule py-1">
-            <dt className="text-[12px] text-ink-faint">{path}</dt>
-            <dd className="text-[12px] text-ink-dim">
-              {entry.dominant}
-              {entry.mode === 'blended' ? ` and ${entry.contributors.length - 1} more` : ''}
-            </dd>
-          </div>
-        ))}
-      </dl>
+      {/*
+        TORN OUT 2026-08-22: which assay claimed which render path, and the parameters it
+        produced. Both come back with the new foundry.
 
-      {/* Task 16 hangs components/Specimen.tsx here, over the same params. */}
-      <p className="mt-4 text-[11px] text-ink-faint">
-        seed {summary.params.seed}, {summary.params.field.type} field, {summary.params.primitives.count}{' '}
-        primitives, {summary.params.dither.matrix}x{summary.params.dither.matrix} dither
-      </p>
+        <dl className="mt-4 grid gap-x-8 gap-y-1 sm:grid-cols-2">
+          {paths.map(([path, entry]) => (
+            <div key={path} className="flex items-baseline justify-between gap-4 border-b border-rule py-1">
+              <dt className="text-[12px] text-ink-faint">{path}</dt>
+              <dd className="text-[12px] text-ink-dim">
+                {entry.dominant}
+                {entry.mode === 'blended' ? ` and ${entry.contributors.length - 1} more` : ''}
+              </dd>
+            </div>
+          ))}
+        </dl>
+
+        <p className="mt-4 text-[11px] text-ink-faint">
+          seed {summary.params.seed}, {summary.params.field.type} field, {summary.params.primitives.count}{' '}
+          primitives, {summary.params.dither.matrix}x{summary.params.dither.matrix} dither
+        </p>
+      */}
     </section>
   )
 }

@@ -253,8 +253,9 @@ describe('POST /api/run', () => {
     expect(last.kind).toBe('complete')
     if (last.kind !== 'complete') throw new Error('expected a complete event')
     expect(last.totalOps).toBe(252)
-    expect(last.params.primitives.count).toBe(24)
-    expect(last.attribution['field.type'].dominant).toBe('SHAPE')
+    // TORN OUT 2026-08-22: the complete event no longer carries render parameters.
+    // expect(last.params.primitives.count).toBe(24)
+    // expect(last.attribution['field.type'].dominant).toBe('SHAPE')
     expect(last.failed).toEqual([])
     expect(last.skipped).toEqual([])
   })
@@ -292,22 +293,24 @@ describe('POST /api/run', () => {
     expect(stored.find((r) => r.id === 'SHAPE')?.ops).toBe(120)
   })
 
-  it('writes the specimen once, at the end', async () => {
-    const db = openDb(':memory:')
-    const ops = fullLine()
-    seed(db, 'b-specimen', ops.map((o) => o.id), true)
-
-    await collect(
-      await handleRun({ batchId: 'b-specimen' }, { db, lookup: lookupFrom(ops), timeoutMs: NEVER }),
-    )
-
-    expect(specimenCount(db, 'b-specimen')).toBe(1)
-    const row = db
-      .prepare('SELECT params, attribution FROM specimens WHERE batch_id = ?')
-      .get('b-specimen') as { params: string; attribution: string }
-    expect(JSON.parse(row.params).seed).toBe(7)
-    expect(JSON.parse(row.attribution)['seed'].dominant).toBe('FRAME')
-  })
+  // TORN OUT 2026-08-22: the run no longer writes a specimen row.
+  //
+  // it('writes the specimen once, at the end', async () => {
+  // const db = openDb(':memory:')
+  // const ops = fullLine()
+  // seed(db, 'b-specimen', ops.map((o) => o.id), true)
+  //
+  // await collect(
+  // await handleRun({ batchId: 'b-specimen' }, { db, lookup: lookupFrom(ops), timeoutMs: NEVER }),
+  // )
+  //
+  // expect(specimenCount(db, 'b-specimen')).toBe(1)
+  // const row = db
+  // .prepare('SELECT params, attribution FROM specimens WHERE batch_id = ?')
+  // .get('b-specimen') as { params: string; attribution: string }
+  // expect(JSON.parse(row.params).seed).toBe(7)
+  // expect(JSON.parse(row.attribution)['seed'].dominant).toBe('FRAME')
+  // })
 
   it('marks dependents skipped when an operator fails, and keeps running', async () => {
     const db = openDb(':memory:')
@@ -332,25 +335,27 @@ describe('POST /api/run', () => {
     ])
   })
 
-  it('sends a fail event naming the unset paths and writes no specimen when the merge cannot close', async () => {
-    const db = openDb(':memory:')
-    const ops = [...fullLine()]
-    ops[0] = fake({ id: 'SHAPE', wing: 'forensics', fails: 'selector renamed' })
-    seed(db, 'b-unclaimed', ops.map((o) => o.id), true)
-
-    const events = await collect(
-      await handleRun({ batchId: 'b-unclaimed' }, { db, lookup: lookupFrom(ops), timeoutMs: NEVER }),
-    )
-
-    const last = events[events.length - 1]
-    expect(last.kind).toBe('fail')
-    if (last.kind !== 'fail') throw new Error('expected a fail event')
-    expect(last.id).toBe('MERGE')
-    expect(last.error).toMatch(/field\.type/)
-    expect(last.error).toMatch(/dither\.matrix/)
-    expect(events.some((e) => e.kind === 'complete')).toBe(false)
-    expect(specimenCount(db, 'b-unclaimed')).toBe(0)
-  })
+  // TORN OUT 2026-08-22: there is no merge to fail.
+  //
+  // it('sends a fail event naming the unset paths and writes no specimen when the merge cannot close', async () => {
+  // const db = openDb(':memory:')
+  // const ops = [...fullLine()]
+  // ops[0] = fake({ id: 'SHAPE', wing: 'forensics', fails: 'selector renamed' })
+  // seed(db, 'b-unclaimed', ops.map((o) => o.id), true)
+  //
+  // const events = await collect(
+  // await handleRun({ batchId: 'b-unclaimed' }, { db, lookup: lookupFrom(ops), timeoutMs: NEVER }),
+  // )
+  //
+  // const last = events[events.length - 1]
+  // expect(last.kind).toBe('fail')
+  // if (last.kind !== 'fail') throw new Error('expected a fail event')
+  // expect(last.id).toBe('MERGE')
+  // expect(last.error).toMatch(/field\.type/)
+  // expect(last.error).toMatch(/dither\.matrix/)
+  // expect(events.some((e) => e.kind === 'complete')).toBe(false)
+  // expect(specimenCount(db, 'b-unclaimed')).toBe(0)
+  // })
 
   it('stores EMBED vector on the batch when EMBED ran', async () => {
     const db = openDb(':memory:')

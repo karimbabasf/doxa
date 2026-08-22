@@ -50,116 +50,125 @@ export type DivePayload = {
   notRun: { id: string; wing: Wing }[]
 }
 
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ batchId: string }> },
-) {
-  const { batchId } = await params
-  const db = gateDb()
+// TORN OUT 2026-08-22: this handler served the graph, which is being rebuilt. The
+// exported types above stay live because the graph components still typecheck against
+// them. The stub keeps the route valid and tells any caller the data is gone.
 
-  const batch = db
-    .prepare('select id, opinion, created_at from batches where id = ?')
-    .get(batchId) as { id: string; opinion: string; created_at: string } | undefined
-  if (!batch) {
-    return NextResponse.json({ error: `no batch ${batchId}` }, { status: 404 })
-  }
+// export async function GET(
+//   _request: Request,
+//   { params }: { params: Promise<{ batchId: string }> },
+// ) {
+//   const { batchId } = await params
+//   const db = gateDb()
+//
+//   const batch = db
+//     .prepare('select id, opinion, created_at from batches where id = ?')
+//     .get(batchId) as { id: string; opinion: string; created_at: string } | undefined
+//   if (!batch) {
+//     return NextResponse.json({ error: `no batch ${batchId}` }, { status: 404 })
+//   }
+//
+//   const orderRow = db
+//     .prepare('select json, signed_at from work_orders where batch_id = ?')
+//     .get(batchId) as { json: string; signed_at: string | null } | undefined
+//   const specimenRow = db
+//     .prepare('select params, attribution from specimens where batch_id = ?')
+//     .get(batchId) as { params: string; attribution: string } | undefined
+//
+//   if (!orderRow || !specimenRow) {
+//     return NextResponse.json(
+//       { error: `batch ${batchId} has no finished run to open` },
+//       { status: 409 },
+//     )
+//   }
+//
+//   const order = JSON.parse(orderRow.json) as WorkOrder
+//   const rationale = new Map(order.operators.map((o) => [o.id, o.rationale]))
+//
+//   const resultRows = db
+//     .prepare('select operator_id, json from results where batch_id = ? order by seq asc')
+//     .all(batchId) as { operator_id: string; json: string }[]
+//
+//   const byId = new Map<string, DiveOperator>()
+//   let totalOps = 0
+//
+//   for (const row of resultRows) {
+//     let result: OperatorResult
+//     try {
+//       result = JSON.parse(row.json) as OperatorResult
+//     } catch {
+//       continue
+//     }
+//     // An operator that ran but is no longer in the registry still has a real reading,
+//     // so it keeps its card and simply reports no dependencies.
+//     let wing: Wing = 'forensics'
+//     let needs: string[] = []
+//     try {
+//       const op = getOperator(row.operator_id)
+//       wing = op.wing
+//       needs = op.needs
+//     } catch {
+//       // Left at the defaults above.
+//     }
+//
+//     totalOps += result.ops ?? 0
+//     byId.set(row.operator_id, {
+//       id: row.operator_id,
+//       wing,
+//       rationale: rationale.get(row.operator_id) ?? '',
+//       ops: result.ops ?? 0,
+//       readings: result.readings ?? {},
+//       contributions: result.contributions ?? [],
+//       evidence: result.evidence ?? [],
+//       notes: result.notes ?? [],
+//       needs,
+//     })
+//   }
+//
+//   // Layer with the planner's own walker, over just the operators that reported. An
+//   // operator that never ran must not open a layer the floor never had.
+//   const ran = [...byId.keys()]
+//   let layers: DiveOperator[][]
+//   try {
+//     layers = layer(ran.map(getOperator)).map((row) =>
+//       row.map((op) => byId.get(op.id)).filter((op): op is DiveOperator => !!op),
+//     )
+//   } catch {
+//     // Registry drift beats the walker. One layer still tells the truth about what ran.
+//     layers = [ran.map((id) => byId.get(id)).filter((op): op is DiveOperator => !!op)]
+//   }
+//
+//   // Signed and enabled, but nothing came back. Read off the work order rather than the
+//   // registry, so it names what this run was actually asked to do.
+//   const notRun = order.operators
+//     .filter((o) => o.enabled && !byId.has(o.id))
+//     .map((o) => {
+//       let wing: Wing = 'forensics'
+//       try {
+//         wing = getOperator(o.id).wing
+//       } catch {
+//         // An operator no longer in the registry still belongs in the count.
+//       }
+//       return { id: o.id, wing }
+//     })
+//
+//   const payload: DivePayload = {
+//     batchId: batch.id,
+//     notRun,
+//     opinion: batch.opinion,
+//     createdAt: batch.created_at,
+//     signedAt: orderRow.signed_at,
+//     plannerNotes: order.plannerNotes ?? '',
+//     params: JSON.parse(specimenRow.params) as RenderParams,
+//     attribution: JSON.parse(specimenRow.attribution) as Record<string, unknown>,
+//     totalOps,
+//     layers: layers.filter((layer) => layer.length > 0),
+//   }
+//
+//   return NextResponse.json(payload)
+// }
+//
 
-  const orderRow = db
-    .prepare('select json, signed_at from work_orders where batch_id = ?')
-    .get(batchId) as { json: string; signed_at: string | null } | undefined
-  const specimenRow = db
-    .prepare('select params, attribution from specimens where batch_id = ?')
-    .get(batchId) as { params: string; attribution: string } | undefined
-
-  if (!orderRow || !specimenRow) {
-    return NextResponse.json(
-      { error: `batch ${batchId} has no finished run to open` },
-      { status: 409 },
-    )
-  }
-
-  const order = JSON.parse(orderRow.json) as WorkOrder
-  const rationale = new Map(order.operators.map((o) => [o.id, o.rationale]))
-
-  const resultRows = db
-    .prepare('select operator_id, json from results where batch_id = ? order by seq asc')
-    .all(batchId) as { operator_id: string; json: string }[]
-
-  const byId = new Map<string, DiveOperator>()
-  let totalOps = 0
-
-  for (const row of resultRows) {
-    let result: OperatorResult
-    try {
-      result = JSON.parse(row.json) as OperatorResult
-    } catch {
-      continue
-    }
-    // An operator that ran but is no longer in the registry still has a real reading,
-    // so it keeps its card and simply reports no dependencies.
-    let wing: Wing = 'forensics'
-    let needs: string[] = []
-    try {
-      const op = getOperator(row.operator_id)
-      wing = op.wing
-      needs = op.needs
-    } catch {
-      // Left at the defaults above.
-    }
-
-    totalOps += result.ops ?? 0
-    byId.set(row.operator_id, {
-      id: row.operator_id,
-      wing,
-      rationale: rationale.get(row.operator_id) ?? '',
-      ops: result.ops ?? 0,
-      readings: result.readings ?? {},
-      contributions: result.contributions ?? [],
-      evidence: result.evidence ?? [],
-      notes: result.notes ?? [],
-      needs,
-    })
-  }
-
-  // Layer with the planner's own walker, over just the operators that reported. An
-  // operator that never ran must not open a layer the floor never had.
-  const ran = [...byId.keys()]
-  let layers: DiveOperator[][]
-  try {
-    layers = layer(ran.map(getOperator)).map((row) =>
-      row.map((op) => byId.get(op.id)).filter((op): op is DiveOperator => !!op),
-    )
-  } catch {
-    // Registry drift beats the walker. One layer still tells the truth about what ran.
-    layers = [ran.map((id) => byId.get(id)).filter((op): op is DiveOperator => !!op)]
-  }
-
-  // Signed and enabled, but nothing came back. Read off the work order rather than the
-  // registry, so it names what this run was actually asked to do.
-  const notRun = order.operators
-    .filter((o) => o.enabled && !byId.has(o.id))
-    .map((o) => {
-      let wing: Wing = 'forensics'
-      try {
-        wing = getOperator(o.id).wing
-      } catch {
-        // An operator no longer in the registry still belongs in the count.
-      }
-      return { id: o.id, wing }
-    })
-
-  const payload: DivePayload = {
-    batchId: batch.id,
-    notRun,
-    opinion: batch.opinion,
-    createdAt: batch.created_at,
-    signedAt: orderRow.signed_at,
-    plannerNotes: order.plannerNotes ?? '',
-    params: JSON.parse(specimenRow.params) as RenderParams,
-    attribution: JSON.parse(specimenRow.attribution) as Record<string, unknown>,
-    totalOps,
-    layers: layers.filter((layer) => layer.length > 0),
-  }
-
-  return NextResponse.json(payload)
+export async function GET() {
+  return NextResponse.json({ error: 'The dive is being rebuilt.' }, { status: 503 })
 }

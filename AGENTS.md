@@ -27,7 +27,7 @@ different factory lines, because the planner picks and orders operators to suit 
 pnpm install
 cp .env.local.example .env.local   # then fill LLM_BASE_URL and LLM_API_KEY
 pnpm dev                           # http://localhost:3000
-pnpm test                          # 546 tests, all must pass
+pnpm test                          # 544 tests, all must pass
 npx tsc --noEmit                   # must report no errors
 pnpm lint                          # 6 errors and 4 warnings today, all pre-existing
 ```
@@ -113,6 +113,23 @@ unit tested against a fixture set.
   pins the fix. Coverage additions exist for this reason.
 - **Collector output shapes differ per collector.** PRIOR-ART and DEMO-SHOP nest their rows.
   CORROBORATE is flat. Code must handle both rather than assume one convention.
+
+## Torn out on 2026-08-22, being rebuilt
+
+The graph and the specimen are commented out, not deleted. Karim's call: both are being
+rebuilt from scratch, and the run that ends after step 3 is the state the build is happy with.
+Grep `TORN OUT 2026-08-22` for every seam. What that covers:
+
+- `app/api/run/route.ts` no longer merges contributions or writes a specimen row, and the
+  `complete` event carries no `params` or `attribution`.
+- `lib/planLanguage.ts` drops the print step, so the gate and the floor sign for three steps.
+- The floor no longer ends on the graph, and `/graph`, `/api/graph` and `/api/dive` are stubs.
+- Certificate section 06 is commented out. The receipt, sections 01 to 05, is untouched.
+
+`lib/foundry/`, `lib/graph/`, `components/graph/` and `components/Specimen.tsx` are left whole
+and unreferenced, with their tests still running. The planner still adds coverage operators for
+render paths nothing reads yet, which is deliberate: cutting that would change which operators
+run, and the run is the part that works.
 
 ## Deliberately unfinished, do not delete
 

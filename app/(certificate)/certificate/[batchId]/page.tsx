@@ -1,11 +1,13 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { isAbsolute, join } from 'node:path'
-import Specimen from '@/components/Specimen'
 import { getBatch, getResults, getWorkOrder, openDb } from '@/lib/db'
 import type { Attribution } from '@/lib/foundry/merge'
-import { encodePng, pngDataUrl } from '@/lib/foundry/png'
-import { DEFAULT_SIZE, renderSpecimen } from '@/lib/foundry/render'
+// TORN OUT 2026-08-22: the three foundry imports section 06 used. `Attribution` stays because
+// the stored row is still read and typed, which keeps `readSpecimen` honest for the rebuild.
+// import Specimen from '@/components/Specimen'
+// import { encodePng, pngDataUrl } from '@/lib/foundry/png'
+// import { DEFAULT_SIZE, renderSpecimen } from '@/lib/foundry/render'
 // Importing the barrel is what fills the registry, so the certificate can name the wing and
 // blurb behind every reading. Next evaluates a server component's module graph more than
 // once and every operator file registers itself at import time, which used to throw on the
@@ -294,16 +296,18 @@ export default async function CertificatePage({ params }: RouteProps) {
     (r.evidence ?? []).map(e => ({ ...e, operatorId: r.id })),
   )
 
-  let png: Uint8Array | null = specimen?.png ?? null
-  let pngProblem: string | null = null
-  if (!png && specimen) {
-    try {
-      png = encodePng(renderSpecimen(specimen.params, DEFAULT_SIZE), DEFAULT_SIZE, specimen.params.palette)
-    } catch (error) {
-      pngProblem = String(error instanceof Error ? error.message : error)
-    }
-  }
-  const pngUrl = png ? pngDataUrl(png) : null
+  // TORN OUT 2026-08-22: striking the PNG. Section 06 was the only reader.
+  //
+  // let png: Uint8Array | null = specimen?.png ?? null
+  // let pngProblem: string | null = null
+  // if (!png && specimen) {
+  //   try {
+  //     png = encodePng(renderSpecimen(specimen.params, DEFAULT_SIZE), DEFAULT_SIZE, specimen.params.palette)
+  //   } catch (error) {
+  //     pngProblem = String(error instanceof Error ? error.message : error)
+  //   }
+  // }
+  // const pngUrl = png ? pngDataUrl(png) : null
 
   return (
     <main className="certificate mx-auto w-full max-w-4xl px-6 py-10">
@@ -565,131 +569,139 @@ export default async function CertificatePage({ params }: RouteProps) {
         )}
       </Section>
 
-      <Section
-        index="06"
-        title="The specimen"
-        order={5}
-        note={specimen ? `seed ${specimen.params.seed}` : undefined}
-      >
-        {!specimen ? (
-          <p>
-            <Absent>
-              No specimen was struck for this batch.{' '}
-              {specimenProblem
-                ? `The stored row could not be read: ${specimenProblem}.`
-                : 'The merge never wrote one, which happens when an operator failed and left a render parameter with no contribution.'}
-            </Absent>
-          </p>
-        ) : (
-          <div className="flex flex-col gap-8">
-            <div className="max-w-[512px]">
-              <Specimen params={specimen.params} attribution={specimen.attribution} />
-              {pngUrl ? (
-                <img
-                  src={pngUrl}
-                  alt={`The specimen struck for batch ${batch.id}`}
-                  className="specimen-print hidden border border-rule"
-                />
-              ) : null}
-              <p className="mt-2 text-ink-faint print:hidden">
-                Hover the specimen to read which assay shaped the pixel under the pointer.
-              </p>
-              {/* Back to where this specimen sits among the others. The certificate is the
-                  end of one run, not the end of the product, and without this the only way
-                  back to the graph is the browser button. */}
-              <p className="mt-1 print:hidden">
-                <a
-                  href={`/graph?open=${batch.id}`}
-                  className="text-signal underline decoration-dotted underline-offset-2"
-                >
-                  See this opinion in the graph
-                </a>
-              </p>
-              <p className="mt-1">
-                {pngUrl && png ? (
-                  <a
-                    href={pngUrl}
-                    download={`doxa-${batch.id}.png`}
-                    className="text-signal underline decoration-dotted underline-offset-2 print:hidden"
-                  >
-                    Download the PNG ({DEFAULT_SIZE} by {DEFAULT_SIZE}, {Math.ceil(png.length / 1024)} kB)
-                  </a>
-                ) : (
-                  <Absent>
-                    The PNG could not be struck from the stored parameters
-                    {pngProblem ? `: ${pngProblem}` : '.'}
-                  </Absent>
-                )}
-              </p>
-            </div>
-
-            <div className="min-w-0">
-              <table className="w-full border-collapse text-left">
-                <thead className="text-ink-faint">
-                  <tr className="border-b border-rule">
-                    <th className="py-1 pr-3 font-normal">Parameter</th>
-                    <th className="py-1 pr-3 font-normal">Value</th>
-                    <th className="py-1 font-normal">Who shaped it</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {ALL_RENDER_PATHS.map(path => {
-                    const entry = specimen.attribution[path]
-                    const value = valueAt(specimen.params, path)
-                    return (
-                      <tr key={path} className="keep-together border-b border-rule align-top">
-                        <td className="py-1.5 pr-3 whitespace-nowrap">{path}</td>
-                        <td className="py-1.5 pr-3 whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1.5">
-                            {isColourPath(path) && typeof value === 'string' ? (
-                              <span
-                                aria-hidden
-                                className="inline-block h-3 w-3 border border-rule-bright"
-                                style={{ backgroundColor: value }}
-                              />
-                            ) : null}
-                            {formatValue(value)}
-                          </span>
-                        </td>
-                        <td className="py-1.5">
-                          {!entry ? (
-                            <Absent>no contributor recorded</Absent>
-                          ) : (
-                            <>
-                              <div className={MODE_CLASS[entry.mode] ?? 'text-ink-faint'}>
-                                {entry.mode === 'sole'
-                                  ? 'sole'
-                                  : entry.mode === 'contested'
-                                    ? `contested, taken whole from ${entry.dominant}`
-                                    : `blended from ${entry.contributors.length} assays`}
-                              </div>
-                              <ul>
-                                {entry.contributors.map((c, i) => (
-                                  <li key={`${c.operatorId}-${i}`}>
-                                    {c.operatorId}{' '}
-                                    <span className="text-ink-dim">{formatValue(c.value)}</span>{' '}
-                                    <span className="text-ink-faint">
-                                      at weight {c.weight.toFixed(2)}
-                                    </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </>
-                          )}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-              <p className="mt-3 text-ink-dim">
-                A blended parameter is a weighted mean of every value listed under it, so no single
-                assay produced it. A contested parameter went whole to the heaviest claim.
-              </p>
-            </div>
-          </div>
-        )}
-      </Section>
+      {
+        // TORN OUT 2026-08-22: section 06, the specimen. The certificate keeps the
+        // receipt (every operation, every reading) and loses the image until the new
+        // foundry is built. Commented line by line rather than deleted so the layout
+        // and the attribution table are here to read while the replacement is written.
+        //
+        // <Section
+        // index="06"
+        // title="The specimen"
+        // order={5}
+        // note={specimen ? `seed ${specimen.params.seed}` : undefined}
+        // >
+        // {!specimen ? (
+        // <p>
+        // <Absent>
+        // No specimen was struck for this batch.{' '}
+        // {specimenProblem
+        // ? `The stored row could not be read: ${specimenProblem}.`
+        // : 'The merge never wrote one, which happens when an operator failed and left a render parameter with no contribution.'}
+        // </Absent>
+        // </p>
+        // ) : (
+        // <div className="flex flex-col gap-8">
+        // <div className="max-w-[512px]">
+        // <Specimen params={specimen.params} attribution={specimen.attribution} />
+        // {pngUrl ? (
+        // <img
+        // src={pngUrl}
+        // alt={`The specimen struck for batch ${batch.id}`}
+        // className="specimen-print hidden border border-rule"
+        // />
+        // ) : null}
+        // <p className="mt-2 text-ink-faint print:hidden">
+        // Hover the specimen to read which assay shaped the pixel under the pointer.
+        // </p>
+        // {/* Back to where this specimen sits among the others. The certificate is the
+        // end of one run, not the end of the product, and without this the only way
+        // back to the graph is the browser button. */}
+        // <p className="mt-1 print:hidden">
+        // <a
+        // href={`/graph?open=${batch.id}`}
+        // className="text-signal underline decoration-dotted underline-offset-2"
+        // >
+        // See this opinion in the graph
+        // </a>
+        // </p>
+        // <p className="mt-1">
+        // {pngUrl && png ? (
+        // <a
+        // href={pngUrl}
+        // download={`doxa-${batch.id}.png`}
+        // className="text-signal underline decoration-dotted underline-offset-2 print:hidden"
+        // >
+        // Download the PNG ({DEFAULT_SIZE} by {DEFAULT_SIZE}, {Math.ceil(png.length / 1024)} kB)
+        // </a>
+        // ) : (
+        // <Absent>
+        // The PNG could not be struck from the stored parameters
+        // {pngProblem ? `: ${pngProblem}` : '.'}
+        // </Absent>
+        // )}
+        // </p>
+        // </div>
+        //
+        // <div className="min-w-0">
+        // <table className="w-full border-collapse text-left">
+        // <thead className="text-ink-faint">
+        // <tr className="border-b border-rule">
+        // <th className="py-1 pr-3 font-normal">Parameter</th>
+        // <th className="py-1 pr-3 font-normal">Value</th>
+        // <th className="py-1 font-normal">Who shaped it</th>
+        // </tr>
+        // </thead>
+        // <tbody>
+        // {ALL_RENDER_PATHS.map(path => {
+        // const entry = specimen.attribution[path]
+        // const value = valueAt(specimen.params, path)
+        // return (
+        // <tr key={path} className="keep-together border-b border-rule align-top">
+        // <td className="py-1.5 pr-3 whitespace-nowrap">{path}</td>
+        // <td className="py-1.5 pr-3 whitespace-nowrap">
+        // <span className="inline-flex items-center gap-1.5">
+        // {isColourPath(path) && typeof value === 'string' ? (
+        // <span
+        // aria-hidden
+        // className="inline-block h-3 w-3 border border-rule-bright"
+        // style={{ backgroundColor: value }}
+        // />
+        // ) : null}
+        // {formatValue(value)}
+        // </span>
+        // </td>
+        // <td className="py-1.5">
+        // {!entry ? (
+        // <Absent>no contributor recorded</Absent>
+        // ) : (
+        // <>
+        // <div className={MODE_CLASS[entry.mode] ?? 'text-ink-faint'}>
+        // {entry.mode === 'sole'
+        // ? 'sole'
+        // : entry.mode === 'contested'
+        // ? `contested, taken whole from ${entry.dominant}`
+        // : `blended from ${entry.contributors.length} assays`}
+        // </div>
+        // <ul>
+        // {entry.contributors.map((c, i) => (
+        // <li key={`${c.operatorId}-${i}`}>
+        // {c.operatorId}{' '}
+        // <span className="text-ink-dim">{formatValue(c.value)}</span>{' '}
+        // <span className="text-ink-faint">
+        // at weight {c.weight.toFixed(2)}
+        // </span>
+        // </li>
+        // ))}
+        // </ul>
+        // </>
+        // )}
+        // </td>
+        // </tr>
+        // )
+        // })}
+        // </tbody>
+        // </table>
+        // <p className="mt-3 text-ink-dim">
+        // A blended parameter is a weighted mean of every value listed under it, so no single
+        // assay produced it. A contested parameter went whole to the heaviest claim.
+        // </p>
+        // </div>
+        // </div>
+        // )}
+        // </Section>
+        null
+      }
 
       {/* The certificate is the end of one run and the product is the loop, so the page
           closes with the one thing there is left to do. It is hidden in print: a printed
