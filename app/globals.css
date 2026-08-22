@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+/*
+ ---break---
+ */
+@custom-variant dark (&:is(.dark *));
 
 /*
  * DOXA's visual system. One place, so three screens do not invent three of them.
@@ -35,11 +41,25 @@
      never be mistaken for a plain failure or a plain success. */
   --state-repair: #4a8fb0;
 
-  /* The four wings. Distinguishable in greyscale too, since the specimen is 1-bit. */
+  /*
+   * The four wings. Distinguishable in greyscale too, since the specimen is 1-bit.
+   *
+   * These are now chart colours, not just labels, so they were measured rather than
+   * chosen by eye. The old semantics and esoteric steps sat 8.6 apart in normal
+   * vision and 4.3 apart under deuteranopia, which is to say they were the same
+   * colour to a red-blind reader and nearly the same to everyone else. On a legend
+   * of four that is survivable; on a timeline of seventeen bars it is not.
+   *
+   * The set below measures 15.6 at its worst adjacent pair in normal vision and 10.5
+   * under simulated colour blindness, both above the floor. Forensics stays close to
+   * neutral on purpose: it is the default wing and the largest group, so it recedes
+   * and lets the three that mean something specific carry the hue. Every wing still
+   * ships with its name next to it, so nothing on screen is colour alone.
+   */
   --wing-field: #d8552a;
-  --wing-forensics: #c9c4bb;
-  --wing-semantics: #7f9dc0;
-  --wing-esoteric: #9b7fc0;
+  --wing-forensics: #8f8a82;
+  --wing-semantics: #6fb8e0;
+  --wing-esoteric: #9a6fd0;
 
   /*
    * Easing. The CSS built-ins are too weak to read as intentional.
@@ -57,6 +77,38 @@
 
   --font-mono-stack: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
   --font-sans-stack: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, sans-serif;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
 }
 
 @theme inline {
@@ -79,7 +131,46 @@
   --color-wing-semantics: var(--wing-semantics);
   --color-wing-esoteric: var(--wing-esoteric);
   --font-mono: var(--font-mono-stack);
-  --font-sans: var(--font-sans-stack);
+  --font-sans: var(--font-sans);
+  --font-heading: var(--font-sans);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
 /* DOXA is dark only. A refinery floor has one lighting condition. */
@@ -876,7 +967,7 @@ button:active,
 
 .gate-said {
   flex: 0 0 auto;
-  padding-bottom: 30px;
+  padding-bottom: 22px;
 }
 
 .gate-said blockquote {
@@ -1139,6 +1230,9 @@ button:active,
   border: 1px solid var(--signal);
   background: var(--signal);
   color: var(--ground);
+  /* The dither kit ships its buttons with a radius. Nothing in this factory has
+     one, and the rule is worth more than the kit's default. */
+  border-radius: 0;
 }
 
 .gate-sign:hover {
@@ -1155,18 +1249,33 @@ button:active,
   opacity: 0.7;
 }
 
+/*
+ * Demoted from a button to a line of text.
+ *
+ * It used to be the same height, the same padding and the same border as the one
+ * action this screen is asking for, which made the gate ask two questions at once.
+ * A stranger under time pressure should not have to work out which of two identical
+ * boxes is the way forward. The full graph is still one click away for whoever wants
+ * it; it is just no longer competing with signing.
+ */
 .gate-drop {
-  border: 1px solid var(--rule-bright);
-  color: var(--ink-dim);
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--rule-bright);
+  font-family: var(--font-sans-stack);
+  font-size: 12.5px;
+  letter-spacing: 0;
+  color: var(--ink-faint);
 }
 
 .gate-drop:hover {
   color: var(--ink);
-  border-color: var(--ink-faint);
+  border-bottom-color: var(--ink-faint);
 }
 
 .gate-drop:active {
-  transform: scale(0.985);
+  transform: none;
 }
 
 .gate-cost,
@@ -1195,4 +1304,598 @@ button:active,
   font-family: var(--font-sans-stack);
   font-size: 12.5px;
   color: var(--ink-dim);
+}
+
+/* ---------------------------------------------------------------------------
+   The wait between pressing compose and the plan arriving.
+
+   About eight seconds against gpt-5.2, which is long enough that one line of text
+   beside the button reads as a hang. It is also the moment the premise of the app
+   is being decided, so it gets a panel rather than a spinner.
+
+   The clock is measured and the stage marks are not, and the copy says which is
+   which. The approach bar decelerates and stops short of the end on purpose: the
+   remaining cells belong to an answer that has not arrived yet.
+   --------------------------------------------------------------------------- */
+
+.wait {
+  flex: 0 0 auto;
+  margin-top: 26px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  border-top-color: var(--rule-bright);
+  background: var(--ground-raised);
+  animation: doxa-row-in var(--dur-row) var(--ease-out) both;
+}
+
+.wait-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--ground-sunk);
+}
+
+.wait-what {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--signal);
+}
+
+.wait-clock {
+  font-size: 11px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.wait-said {
+  position: relative;
+  overflow: hidden;
+  padding: 15px 16px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.wait-said p {
+  margin: 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--signal);
+  font-family: var(--font-sans-stack);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+/* The read head: a hairline with a short trail crossing the sentence at a steady
+   rate, which is the one thing on this screen that is literally happening. */
+.wait-sweep {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -90px;
+  width: 90px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--signal) 14%, transparent) 78%,
+    var(--signal)
+  );
+  opacity: 0.55;
+  animation: wait-sweep 2.6s var(--ease-in-out) infinite;
+}
+
+@keyframes wait-sweep {
+  to {
+    left: 100%;
+  }
+}
+
+/* The interior kit draws the steps and the bar. These two rules only place them,
+   because a component that also decides its own margins cannot be reused. */
+.wait-steps {
+  padding: 15px 16px 0;
+}
+
+.wait-progress {
+  padding: 14px 16px 0;
+}
+
+.wait-foot {
+  margin: 12px 16px 16px;
+  font-family: var(--font-sans-stack);
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+/* The global reduced-motion rule collapses animations to 0.01ms, which would park
+   the read head at the far edge and leave it there looking like a stuck element.
+   It is decoration, so it goes entirely rather than freezing. */
+@media (prefers-reduced-motion: reduce) {
+  .wait-sweep {
+    display: none;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The wait budget on the gate.
+
+   One stacked bar, one segment per layer, each as wide as that layer's slowest
+   instrument. That is how `plan.ts` builds the total, so the bar and the number
+   in the footer are the same arithmetic drawn two ways and cannot disagree.
+
+   Two pixels of ground between segments, so a run of layers reads as counted
+   rather than poured. Labels are dropped rather than squeezed when a segment is
+   too narrow to hold one; the reason strip still has the full reading.
+   --------------------------------------------------------------------------- */
+
+.budget {
+  flex: 0 0 auto;
+  padding-bottom: 26px;
+}
+
+.budget-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 9px;
+}
+
+.budget-cap {
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  color: var(--ink-faint);
+}
+
+.budget-total {
+  font-size: 11px;
+  color: var(--ink-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The plot box. dither-kit fills its parent, so the height lives here rather
+   than inside a chart that should be reusable at any size. */
+.budget-plot {
+  height: 132px;
+}
+
+.budget-note {
+  margin: 11px 0 0;
+  font-family: var(--font-sans-stack);
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  text-wrap: pretty;
+}
+
+/* -- the step header, and the step the planner decided against ------------- */
+
+.gate-step-bar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.gate-step-count {
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+
+.gate-step.is-web .gate-step-count {
+  color: var(--signal);
+}
+
+/*
+ * A step with nothing in it is a decision, so it is drawn as one: dashed, sunk,
+ * and out of the accent colour entirely. Before this it inherited the web step's
+ * signal border and live badge, which pointed the brightest box on the screen at
+ * the one part of the plan that was never going to run.
+ */
+.gate-step.is-stayed {
+  border-style: dashed;
+  border-color: var(--rule-bright);
+  background: var(--ground-sunk);
+}
+
+.gate-step.is-stayed h2 {
+  color: var(--ink-dim);
+}
+
+/* ---------------------------------------------------------------------------
+   The floor, drawn against one clock.
+
+   Three columns: the operator, its bar, its reading. The gridlines and the tick
+   labels are inset by the same two variables as the track column, so the axis
+   under the chart lines up with the bars above it without anyone measuring.
+
+   No transition on the bar. It is redrawn several times a second while an
+   operator runs, and the animation policy at the top of this sheet is explicit
+   that a transition on a fast-changing value reads as lag rather than motion.
+   --------------------------------------------------------------------------- */
+
+.gantt {
+  --gantt-gutter: 168px;
+  --gantt-val: 140px;
+  margin-top: 18px;
+}
+
+.gantt-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.gantt-cap {
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--ink-faint);
+}
+
+.gantt-span {
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+.gantt-body {
+  position: relative;
+  padding-top: 4px;
+}
+
+/* One overlay for the whole chart rather than a set per row, so the lines run
+   unbroken from the top bar to the bottom one. */
+.gantt-grid {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--gantt-gutter);
+  right: var(--gantt-val);
+  pointer-events: none;
+}
+
+.gantt-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--rule);
+}
+
+.gantt-layer {
+  margin: 11px 0 4px;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  color: var(--ink-faint);
+}
+
+.gantt-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: var(--gantt-gutter) minmax(0, 1fr) var(--gantt-val);
+  align-items: center;
+  height: 21px;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .gantt-row:hover {
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+}
+
+.gantt-id {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+  font-size: 11px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gantt-row[data-state='ok'] .gantt-id,
+.gantt-row[data-state='repaired'] .gantt-id,
+.gantt-row[data-state='live'] .gantt-id {
+  color: var(--ink);
+}
+
+.gantt-row[data-state='idle'] .gantt-id,
+.gantt-row[data-state='skipped'] .gantt-id {
+  color: var(--ink-faint);
+}
+
+.gantt-row[data-state='failed'] .gantt-id {
+  color: var(--state-fail);
+}
+
+/* The wing, as a chip against the id. Colour is never the only carrier here: the
+   legend in the header names every wing and the row names its operator. */
+.gantt-swatch {
+  flex: 0 0 3px;
+  width: 3px;
+  height: 12px;
+}
+
+.gantt-row[data-state='idle'] .gantt-swatch,
+.gantt-row[data-state='skipped'] .gantt-swatch {
+  opacity: 0.35;
+}
+
+.gantt-track {
+  position: relative;
+  height: 100%;
+}
+
+.gantt-bar {
+  position: absolute;
+  top: 5px;
+  height: 11px;
+  min-width: 2px;
+}
+
+/* A repair is the beat the demo is built on, so it is hatched as well as coloured
+   and does not rely on a reader spotting one blue bar among the blue bars. */
+.gantt-row[data-state='repaired'] .gantt-bar {
+  background-image: repeating-linear-gradient(
+    135deg,
+    transparent,
+    transparent 3px,
+    var(--state-repair) 3px,
+    var(--state-repair) 6px
+  );
+}
+
+.gantt-row[data-state='skipped'] .gantt-bar {
+  opacity: 0.3;
+}
+
+.gantt-val {
+  padding-left: 12px;
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gantt-row[data-state='live'] .gantt-val {
+  color: var(--state-live);
+}
+
+.gantt-ticks {
+  position: relative;
+  height: 17px;
+  margin-left: var(--gantt-gutter);
+  margin-right: var(--gantt-val);
+  border-top: 1px solid var(--rule);
+}
+
+.gantt-ticks span {
+  position: absolute;
+  top: 4px;
+  font-size: 9.5px;
+  color: var(--ink-faint);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A phone has no room for a 168px gutter and a 140px reading beside a bar worth
+   looking at. The bar keeps the width; the columns either side give it up. */
+@media (max-width: 640px) {
+  .gantt {
+    --gantt-gutter: 96px;
+    --gantt-val: 74px;
+  }
+
+  .gantt-id {
+    font-size: 10px;
+    padding-right: 8px;
+  }
+
+  .gantt-val {
+    padding-left: 8px;
+  }
+}
+
+/* Where the floor's view switch sits. The control itself is the interior kit's. */
+.floor-view {
+  margin-top: 20px;
+}
+
+/* ---------------------------------------------------------------------------
+   The two kits, sized to this factory.
+
+   Both ship their own type scale, which is right for their own docs and wrong
+   for a readout. These rules are unlayered, so they win over the utilities the
+   components carry without either kit being edited.
+   --------------------------------------------------------------------------- */
+
+/* The running op total. It is the largest number on the floor and the one thing
+   a room reads from the back, so it takes the display size the counter had. */
+.op-flash {
+  padding: 0;
+  font-family: var(--font-mono-stack);
+  font-size: 38px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  border-radius: 0;
+}
+
+.op-flash.is-sm {
+  font-size: 18px;
+  letter-spacing: 0;
+}
+
+/* The intake's one action. The kit gives it the pending and error states; this
+   gives it the size of a thing a stranger reaches for without being told. */
+.intake-go {
+  min-height: 44px;
+  padding: 0 22px;
+  border: 1px solid var(--signal);
+  background: var(--signal);
+  color: var(--ground);
+  font-family: var(--font-mono-stack);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  border-radius: 0;
+}
+
+.intake-go:disabled {
+  border-color: var(--rule);
+  background: none;
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+/* The break, in the alarm colour it earns. The kit draws the fill that tracks
+   the hold; this only says which colour the fill is and squares the corners. */
+.break-hold {
+  flex: 1;
+  border: 1px solid var(--state-fail);
+  color: var(--state-fail);
+  font-family: var(--font-mono-stack);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   What the floor becomes when the specimen is struck.
+
+   The run is over, so the screen stops reporting it and answers the question the
+   run was for: where this opinion landed among the others. The graph takes the
+   room, the numbers above it make the case that the work was real, and exactly
+   one button leaves the page.
+   --------------------------------------------------------------------------- */
+
+.done {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  padding: 0 26px 22px;
+  animation: doxa-row-in var(--dur-row) var(--ease-out) both;
+}
+
+.done-head {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 18px 0 14px;
+}
+
+/* The one sentence a person reads off this screen, so it gets the largest type
+   on it and the readable face. */
+.done-claim {
+  margin: 0;
+  font-family: var(--font-sans-stack);
+  font-size: 25px;
+  font-weight: 500;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+.done-stats {
+  display: flex;
+  gap: 26px;
+  margin: 0;
+}
+
+.done-stats div {
+  display: flex;
+  flex-direction: column-reverse;
+  align-items: flex-end;
+}
+
+.done-stats dt {
+  margin-top: 3px;
+  font-size: 9.5px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.done-stats dd {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The canvas paints itself into whatever box it is given, so the box is here. */
+.done-graph {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid var(--rule);
+  background: var(--ground-sunk);
+}
+
+.done-wait {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  margin: 0;
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+}
+
+/* A fixed two line strip. Selecting a node must not move the button under it. */
+.done-read {
+  flex: 0 0 auto;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 36px;
+  margin: 12px 0 0;
+  font-family: var(--font-sans-stack);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-dim);
+  text-wrap: pretty;
+}
+
+.done-go {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 20px;
+  margin-top: 14px;
+}
+
+.done-again {
+  font-family: var(--font-sans-stack);
+  font-size: 12.5px;
+  color: var(--ink-faint);
+  text-decoration: none;
+  border-bottom: 1px solid var(--rule-bright);
+}
+
+.done-again:hover {
+  color: var(--ink);
+  border-bottom-color: var(--ink-faint);
 }

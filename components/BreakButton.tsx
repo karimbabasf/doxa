@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { HoldToConfirm } from './interior/hold-to-confirm'
 
 /*
  * The control a judge presses. It lives on the floor screen, so unlike the shop page it
@@ -98,15 +99,22 @@ export default function BreakButton({ className = '' }: { className?: string }) 
         so the page still looks right to a reader.
       </p>
 
+      {/*
+        Breaking is held, restoring is pressed. The break is the one irreversible
+        looking thing in the demo and it is driven live in front of a room, so it
+        wants a gesture nobody performs by brushing a trackpad. Restoring is the
+        way back and should never be harder than the way in.
+      */}
       <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => press('POST')}
+        <HoldToConfirm
+          onConfirm={() => void press('POST')}
           disabled={busy || broken}
-          className="flex-1 border border-state-fail px-3 py-2 text-[12px] uppercase tracking-[0.1em] text-state-fail hoverable hover:bg-state-fail hover:text-ground disabled:cursor-not-allowed disabled:border-rule disabled:text-ink-faint disabled:hover:bg-transparent disabled:hover:text-ink-faint"
+          confirmLabel="Breaking the page"
+          duration={900}
+          className="break-hold"
         >
-          Break the page
-        </button>
+          Hold to break the page
+        </HoldToConfirm>
         <button
           type="button"
           onClick={() => press('DELETE')}

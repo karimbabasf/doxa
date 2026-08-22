@@ -9,7 +9,9 @@ import {
   readingOrder,
   type StepId,
 } from '@/lib/planLanguage'
+import { DitherButton } from './dither-kit'
 import type { GateOperator } from './OperatorCard'
+import WaitBudget from './WaitBudget'
 
 /**
  * The plan, on one screen, for a person who has never seen this before.
@@ -113,6 +115,8 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
           <blockquote>{opinion}</blockquote>
         </div>
 
+        <WaitBudget operators={running} />
+
         <div className="gate-cap">CLICK ANY TOOL TO SEE WHY IT WAS PICKED</div>
 
         <div className="gate-line">
@@ -123,12 +127,30 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
             const shown = open ? ops : ops.slice(0, CHIPS_SHOWN)
             const rest = ops.length - shown.length
 
+            // The web step is the one the room is here to see, but only when it has
+            // something to do. An empty step wearing the accent colour and the live
+            // badge points the whole screen at the one box that is not going to run,
+            // which is how the gate came to advertise its own no-op.
+            const leaves = isWeb && ops.length > 0
+            const stayed = isWeb && ops.length === 0
+
             return (
-              <section key={step.id} className={`gate-step${isWeb ? ' is-web' : ''}`}>
-                <span className="gate-step-n">{step.n}</span>
+              <section
+                key={step.id}
+                className={`gate-step${leaves ? ' is-web' : ''}${stayed ? ' is-stayed' : ''}`}
+              >
+                <div className="gate-step-bar">
+                  <span className="gate-step-n">{step.n}</span>
+                  {ops.length > 0 && (
+                    <span className="gate-step-count">
+                      {ops.length} {ops.length === 1 ? 'TOOL' : 'TOOLS'}
+                    </span>
+                  )}
+                  {stayed && <span className="gate-step-count">NOT USED</span>}
+                </div>
                 <h2>{step.title}</h2>
                 <p>{step.line}</p>
-                {isWeb && (
+                {leaves && (
                   <span className="gate-badge">
                     <span className="gate-dot" />
                     BRIGHT DATA
@@ -214,12 +236,24 @@ export default function PlanBoard({ batchId, opinion, operators, estMs, signedAt
             SIGNED, GO TO THE FLOOR
           </a>
         ) : (
-          <button type="button" className="gate-sign" onClick={() => void sign()} disabled={busy}>
+          // The kit documents `color` as a palette name or a hue, but its props
+          // intersect ComponentProps<'button'>, whose own `color` attribute is a
+          // string, so the number half of the union is unreachable. The signal is
+          // an orange either way, and the solid fill underneath stays on purpose:
+          // if the canvas never paints, the most important control on the screen
+          // is still a legible button rather than a label on bare ground.
+          <DitherButton
+            color="orange"
+            variant="solid"
+            className="gate-sign"
+            onClick={() => void sign()}
+            disabled={busy}
+          >
             {busy ? 'SENDING IT DOWN THE LINE' : 'SIGN IT AND RUN'}
-          </button>
+          </DitherButton>
         )}
         <a className="gate-drop" href={`/gate/${batchId}?detail=1`}>
-          SEE EVERY TOOL
+          Or see every tool and its switch
         </a>
         {error ? (
           <span className="gate-error">{error}</span>

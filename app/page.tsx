@@ -2,6 +2,8 @@
 
 import Link from 'next/link'
 import { useCallback, useMemo, useState } from 'react'
+import { LoadingButton } from '@/components/interior/loading-button'
+import PlannerWait from '@/components/PlannerWait'
 import { MAX_CHARS, MIN_WORDS, countWords, normalise } from '@/lib/intake'
 import type { WorkOrder } from '@/lib/types'
 
@@ -82,14 +84,18 @@ export default function HomePage() {
       })
       const body = (await res.json()) as WorkOrder & { error?: string }
       if (!res.ok) {
-        setError(body.error ?? `Intake refused the opinion with status ${res.status}.`)
+        const refusal = body.error ?? `Intake refused the opinion with status ${res.status}.`
+        setError(refusal)
         setBusy(false)
-        return
+        // Rethrown, not swallowed. The button reports its own outcome now, and a
+        // refusal that returns quietly would light it up as a success.
+        throw new Error(refusal)
       }
       window.location.assign(`/gate/${body.batchId}`)
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err))
       setBusy(false)
+      throw err
     }
   }, [clean, ready])
 
@@ -120,7 +126,9 @@ export default function HomePage() {
         onKeyDown={event => {
           if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
             event.preventDefault()
-            void submit()
+            // submit rethrows so the button can report a refusal. Nothing is
+            // listening on this path, and the error is already on screen.
+            void submit().catch(() => {})
           }
         }}
         rows={5}
@@ -145,23 +153,16 @@ export default function HomePage() {
       )}
 
       <div className="mt-6 flex items-center gap-4">
-        <button
-          type="button"
-          onClick={() => void submit()}
+        <LoadingButton
+          onAction={submit}
           disabled={!ready}
-          className={`border px-5 py-2 text-[11px] tracking-[0.14em] ${
-            ready
-              ? 'cursor-pointer border-signal bg-signal text-ground'
-              : 'cursor-not-allowed border-rule text-ink-faint'
-          }`}
+          pendingLabel="COMPOSING"
+          successLabel="COMPOSED"
+          errorLabel="INTAKE REFUSED IT"
+          className="intake-go"
         >
           COMPOSE THE WORK ORDER
-        </button>
-        {busy && (
-          <span className="is-live text-[11px] text-state-live">
-            The planner is reading your text and choosing instruments.
-          </span>
-        )}
+        </LoadingButton>
       </div>
 
       {/*
@@ -177,34 +178,47 @@ export default function HomePage() {
         the page never scrolls. How many boxes are on screen is a property of the laptop,
         not a number written down here.
       */}
-      <h2 className="mt-8 shrink-0 text-[10px] tracking-[0.16em] text-ink-faint">OR CHOOSE ONE</h2>
-      <section
-        className="suggest mt-3 min-h-0 flex-1"
-        aria-label="Sample opinions"
-        style={{ ['--suggest-dur' as string]: `${SAMPLES.length * ROW_SECONDS}s` }}
-      >
-        <div className="suggest-track">
-          {SAMPLES.map(sample => (
-            <button key={sample} type="button" className="suggest-row" onClick={() => take(sample)}>
-              {sample}
-            </button>
-          ))}
-          {/* The second pass exists only to hide the seam. It is not for a reader. */}
-          <div className="suggest-dup" aria-hidden="true">
-            {SAMPLES.map(sample => (
-              <button
-                key={sample}
-                type="button"
-                tabIndex={-1}
-                className="suggest-row"
-                onClick={() => take(sample)}
-              >
-                {sample}
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
+      {busy ? (
+        <PlannerWait opinion={clean} />
+      ) : (
+        <>
+          <h2 className="mt-8 shrink-0 text-[10px] tracking-[0.16em] text-ink-faint">
+            OR CHOOSE ONE
+          </h2>
+          <section
+            className="suggest mt-3 min-h-0 flex-1"
+            aria-label="Sample opinions"
+            style={{ ['--suggest-dur' as string]: `${SAMPLES.length * ROW_SECONDS}s` }}
+          >
+            <div className="suggest-track">
+              {SAMPLES.map(sample => (
+                <button
+                  key={sample}
+                  type="button"
+                  className="suggest-row"
+                  onClick={() => take(sample)}
+                >
+                  {sample}
+                </button>
+              ))}
+              {/* The second pass exists only to hide the seam. It is not for a reader. */}
+              <div className="suggest-dup" aria-hidden="true">
+                {SAMPLES.map(sample => (
+                  <button
+                    key={sample}
+                    type="button"
+                    tabIndex={-1}
+                    className="suggest-row"
+                    onClick={() => take(sample)}
+                  >
+                    {sample}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+        </>
+      )}
     </main>
   )
 }

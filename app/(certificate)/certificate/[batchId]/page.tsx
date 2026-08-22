@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { isAbsolute, join } from 'node:path'
 import Specimen from '@/components/Specimen'
@@ -595,7 +596,7 @@ export default async function CertificatePage({ params }: RouteProps) {
                   back to the graph is the browser button. */}
               <p className="mt-1 print:hidden">
                 <a
-                  href={`/?open=${batch.id}`}
+                  href={`/graph?open=${batch.id}`}
                   className="text-signal underline decoration-dotted underline-offset-2"
                 >
                   See this opinion in the graph
@@ -686,6 +687,18 @@ export default async function CertificatePage({ params }: RouteProps) {
           </div>
         )}
       </Section>
+
+      {/* The certificate is the end of one run and the product is the loop, so the page
+          closes with the one thing there is left to do. It is hidden in print: a printed
+          certificate is a record, and a record does not ask the reader for anything. */}
+      <div className="mt-10 flex items-center gap-5 print:hidden">
+        <Link className="gate-sign" href="/">
+          PUT ANOTHER OPINION THROUGH
+        </Link>
+        <span className="prose-sans text-[12.5px] text-ink-faint">
+          Every reading here came from your sentence and nobody else&apos;s.
+        </span>
+      </div>
 
       <footer className="mt-12 border-t border-rule-bright pt-3 text-ink-faint">
         <p>
