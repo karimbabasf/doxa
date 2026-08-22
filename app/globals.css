@@ -678,9 +678,10 @@ button:active,
    measure, and no JavaScript has to know a pixel height.
 
    Every line is a box. A bare line of text on a moving column reads as a caption,
-   and nobody tries to click a caption. Eight boxes sit in the window at once, out of
-   a pool of twenty two, so the column reads as a supply with more in it than the
-   screen can hold rather than a short list going round.
+   and nobody tries to click a caption. The window is a flex child taking whatever
+   height the page has left, so the box count is whatever the screen affords and the
+   page never scrolls. The pool is twenty two either way, deeper than any screen, so
+   the column reads as a supply rather than a short list going round.
    --------------------------------------------------------------------------- */
 
 .suggest {
@@ -689,7 +690,8 @@ button:active,
   --suggest-gap: 8px;
   --suggest-row: calc(var(--suggest-box) + var(--suggest-gap));
   position: relative;
-  height: calc(var(--suggest-row) * 8);
+  /* Height comes from the flex parent. Two rows is the floor, below which it is noise. */
+  min-height: calc(var(--suggest-row) * 2);
   overflow: hidden;
   /*
    * A short fade at each edge only. The boxes have to stay legible, so this hides
@@ -787,8 +789,6 @@ button:active,
  */
 @media (prefers-reduced-motion: reduce) {
   .suggest {
-    height: auto;
-    max-height: calc(var(--suggest-row) * 9);
     overflow-y: auto;
     mask-image: none;
     -webkit-mask-image: none;

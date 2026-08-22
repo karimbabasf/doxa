@@ -94,7 +94,7 @@ export default function HomePage() {
   }, [clean, ready])
 
   return (
-    <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center px-6 py-16">
+    <main className="mx-auto flex h-[100dvh] w-full max-w-2xl flex-col overflow-hidden px-6 py-10">
       <div className="flex items-baseline justify-between gap-4">
         <h1 className="text-[15px] tracking-[0.34em] text-ink">DOXA</h1>
         <Link
@@ -110,7 +110,7 @@ export default function HomePage() {
         plus a receipt of every measurement.
       </p>
 
-      <label htmlFor="opinion" className="mt-10 block text-[10px] tracking-[0.16em] text-ink-faint">
+      <label htmlFor="opinion" className="mt-8 block text-[10px] tracking-[0.16em] text-ink-faint">
         THE OPINION
       </label>
       <textarea
@@ -172,10 +172,14 @@ export default function HomePage() {
 
         Each line is boxed. A bare line of text on a moving column reads as a caption, and
         a caption is not something a person tries to click.
+
+        It takes whatever height the screen has left rather than a set number of rows, so
+        the page never scrolls. How many boxes are on screen is a property of the laptop,
+        not a number written down here.
       */}
-      <h2 className="mt-12 text-[10px] tracking-[0.16em] text-ink-faint">OR CHOOSE ONE</h2>
+      <h2 className="mt-8 shrink-0 text-[10px] tracking-[0.16em] text-ink-faint">OR CHOOSE ONE</h2>
       <section
-        className="suggest mt-3"
+        className="suggest mt-3 min-h-0 flex-1"
         aria-label="Sample opinions"
         style={{ ['--suggest-dur' as string]: `${SAMPLES.length * ROW_SECONDS}s` }}
       >
