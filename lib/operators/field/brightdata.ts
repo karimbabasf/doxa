@@ -17,7 +17,7 @@ const run = promisify(execFile)
 /** Collector ids, pinned in CLAUDE.md. Env wins so a rebuilt collector needs no code change. */
 export const CORROBORATE_COLLECTOR = process.env.BRIGHTDATA_CORROBORATE_ID || 'c_mt12stqk2d78cqkmn2'
 export const PRIOR_ART_COLLECTOR = process.env.BRIGHTDATA_PRIOR_ART_ID || 'c_mt12spi4173gff7wai'
-export const DEMO_SHOP_COLLECTOR = process.env.BRIGHTDATA_DEMO_SHOP_ID || 'c_pending'
+export const DEMO_SHOP_COLLECTOR = process.env.BRIGHTDATA_DEMO_SHOP_ID || 'c_mt4lryh31kh6vr7brh'
 
 /**
  * The demo shop is served by this app, so its public address is whatever tunnel is up.

@@ -34,7 +34,7 @@ Reuse these. Do not build a new scraper for a target already listed here.
 |---|---|---|---|
 | PRIOR-ART | `c_mt12spi4173gff7wai` | `https://en.wikiquote.org/wiki/<Topic>` | built. Data good, but `attributed_to` is mis-bound and the heal does not reach production. |
 | CORROBORATE | `c_mt12stqk2d78cqkmn2` | `https://tildes.net/~<group>` | built and verified, 250 clean rows |
-| DEMO-SHOP | `PENDING_ID` | our own `/demo/shop/[set]` page over a cloudflared tunnel | built 2026-08-22. Read by the `DEMO-SHOP` operator, which registers only under `DOXA_DEMO_SHOP=1`. |
+| DEMO-SHOP | `c_mt4lryh31kh6vr7brh` | our own `/demo/shop/[set]` page over a cloudflared tunnel | built 2026-08-22. Read by the `DEMO-SHOP` operator, which registers only under `DOXA_DEMO_SHOP=1`. |
 
 ### DEMO-SHOP page contract
 
@@ -54,6 +54,27 @@ scrape: scrape `a`, verify on `b`. `mustVary` is `name`, `sku`.
 
 The break is a renamed selector on purpose. Healers fix those. They do not fix mis-bound fields,
 which is the entire explanation of the PRIOR-ART failure above.
+
+**The break flag is global, not per set.** Pressing it renames the price class on all three sets at
+once, so the verify scrape reads a set that is broken the same way. That is still a real proof: the
+healed collector has to read a page with different products and different SKUs that this run has not
+touched, which is what catches a heal that memorised set `a`. What it does not prove is that the
+collector still reads an unbroken page, so a rehearsal that presses restore needs the healed selector
+to match both class names.
+
+### DEMO-SHOP real output shape
+
+Verified against the live collector 2026-08-22. Nested like PRIOR-ART, not flat like CORROBORATE, and
+`price` is an object rather than the text on the page. `lib/operators/field/demoShop.ts` flattens both
+before the gate sees them.
+
+```
+[ { products: [ { name, price: { value, currency, symbol }, sku, stock } ],
+    product_page_url: string, input: { url } } ]
+```
+
+Under the break, `price` is absent from every product rather than empty, so condition 1 of the gate
+fires with "price is missing from 6 of 6 rows". Page still returns 200 and still looks right.
 
 ## The heal is never believed on its own word
 
