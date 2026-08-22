@@ -217,10 +217,15 @@ export function uncoveredPaths(ids: string[]): RenderPath[] {
  * Adds the fewest operators that cover whatever the planner's picks left unmeasured.
  *
  * Greedy set cover, largest contribution first, ties broken by id so the same opinion always
- * produces the same plan. Field operators sort last because they are the only ones that leave
- * the building: pulling one in for coverage would spend a scrape the planner deliberately
- * declined. Nothing else needs them, since every path a field operator touches is also touched
- * by a forensics, semantics or esoteric operator.
+ * produces the same plan. Field operators are excluded outright, because they are the only ones
+ * that leave the building: pulling one in for coverage would spend a scrape the planner
+ * deliberately declined. Nothing else needs them, since every path a field operator touches is
+ * also touched by a forensics, semantics or esoteric operator, which `coverage.test.ts` asserts.
+ *
+ * This was a sort rather than a filter until 2026-08-22, which only ever worked by accident: a
+ * sort breaks ties, and greedy takes any candidate that strictly covers more. DEMO-SHOP claims
+ * two paths, beat every one-path alternative, and got pulled into a run about AI, where it would
+ * have scraped a moving-supplies catalogue for no reason.
  */
 export function coverageAdditions(pickedIds: string[]): { id: string; covers: RenderPath[] }[] {
   const outstanding = new Set(uncoveredPaths(pickedIds))
@@ -228,11 +233,8 @@ export function coverageAdditions(pickedIds: string[]): { id: string; covers: Re
 
   const chosen = new Set(resolveDeps(pickedIds))
   const candidates = allOperators()
-    .filter(op => !chosen.has(op.id))
-    .sort((a, b) => {
-      const wing = Number(a.wing === 'field') - Number(b.wing === 'field')
-      return wing !== 0 ? wing : a.id.localeCompare(b.id)
-    })
+    .filter(op => !chosen.has(op.id) && op.wing !== 'field')
+    .sort((a, b) => a.id.localeCompare(b.id))
 
   const additions: { id: string; covers: RenderPath[] }[] = []
   while (outstanding.size) {

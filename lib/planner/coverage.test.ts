@@ -72,4 +72,28 @@ describe('render coverage', () => {
     expect([...covers([...LIVE_PICK, ...additions.map(a => a.id)])].sort())
       .toEqual([...ALL_RENDER_PATHS].sort())
   })
+  /**
+   * The invariant that makes excluding the field wing safe. If a render path ever became
+   * reachable only through a field operator, coverage could not reach it and a signed plan
+   * would strike no specimen. Assert it here rather than discovering it on a live run.
+   */
+  it('leaves no render path reachable only through the field wing', () => {
+    const claimed = new Set(ALL_OPERATORS.filter(op => op.wing !== 'field').flatMap(op => op.touches))
+    expect(ALL_RENDER_PATHS.filter(path => !claimed.has(path))).toEqual([])
+  })
+
+  /**
+   * A field operator that claims more paths than any single alternative used to win greedy
+   * outright, because the field-last rule was a sort and a sort only breaks ties. DEMO-SHOP
+   * claims two and was pulled into a run about AI, where it would have scraped a supply
+   * catalogue for nothing. Starting from one operator leaves the most paths outstanding, so
+   * it is the case most likely to reach for the field wing.
+   */
+  it('never reaches for the field wing, however many paths one of them claims', () => {
+    for (const pick of [['TOKENIZE'], ['HEDGE-7'], ['FK-READ'], LIVE_PICK]) {
+      for (const addition of coverageAdditions(pick)) {
+        expect(getOperator(addition.id).wing).not.toBe('field')
+      }
+    }
+  })
 })
