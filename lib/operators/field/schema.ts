@@ -171,15 +171,17 @@ export async function fetchWithRepair(
   opts?: RepairOpts,
 ): Promise<{ rows: Row[]; repaired: boolean; healDiff?: string }> {
   const shape = opts?.flatten ?? ((rows: unknown[]) => rows)
-  const mode = { sync: opts?.sync === true }
+  // Spread rather than passed as a third argument, so a collector that has not asked for
+  // sync is called with exactly the two arguments it was always called with.
+  const mode: [{ sync: true }] | [] = opts?.sync === true ? [{ sync: true }] : []
 
-  const first = checkRows(shape(await triggerCollector(collectorId, input, mode)), fields, opts)
+  const first = checkRows(shape(await triggerCollector(collectorId, input, ...mode)), fields, opts)
   if (first.ok) return { rows: first.rows, repaired: false }
 
   // One repair attempt, told exactly what failed. There is never a second.
   const healDiff = await healCollector(collectorId, first.reason)
 
-  const retry = checkRows(shape(await triggerCollector(collectorId, input, mode)), fields, opts)
+  const retry = checkRows(shape(await triggerCollector(collectorId, input, ...mode)), fields, opts)
   if (!retry.ok) {
     throw new Error(
       `Scraper ${collectorId} still failing after one repair: ${retry.reason}. A human needs to look at this.`,
@@ -187,7 +189,7 @@ export async function fetchWithRepair(
   }
 
   // The heal is not believed until it holds on an input this run has not scraped.
-  const proof = checkRows(shape(await triggerCollector(collectorId, verifyInput, mode)), fields, opts)
+  const proof = checkRows(shape(await triggerCollector(collectorId, verifyInput, ...mode)), fields, opts)
   if (!proof.ok) {
     throw new Error(
       `Scraper ${collectorId} passed its own input after repair but failed on ${JSON.stringify(verifyInput)}: ` +

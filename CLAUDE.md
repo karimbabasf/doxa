@@ -34,7 +34,7 @@ Reuse these. Do not build a new scraper for a target already listed here.
 |---|---|---|---|
 | PRIOR-ART | `c_mt12spi4173gff7wai` | `https://en.wikiquote.org/wiki/<Topic>` | built. Data good, but `attributed_to` is mis-bound and the heal does not reach production. |
 | CORROBORATE | `c_mt12stqk2d78cqkmn2` | `https://tildes.net/~<group>` | built and verified, 250 clean rows |
-| DEMO-SHOP | not built yet | our own `/demo/shop/[set]` page over a tunnel | build Friday 08-21, after the tunnel URL check in Task 17 Step 2. Pin the ID here. |
+| DEMO-SHOP | `PENDING_ID` | our own `/demo/shop/[set]` page over a cloudflared tunnel | built 2026-08-22. Read by the `DEMO-SHOP` operator, which registers only under `DOXA_DEMO_SHOP=1`. |
 
 ### DEMO-SHOP page contract
 
@@ -121,6 +121,11 @@ identical-value check would fail a perfect scrape. So condition 3 applies only t
 |---|---|
 | PRIOR-ART | `quote_text`, `attributed_to` |
 | CORROBORATE | `title`, `topic_url` |
+| DEMO-SHOP | `name`, `sku` |
+
+`price` and `stock` stay out of DEMO-SHOP's list on purpose: two products may legitimately carry the
+same price, and the break renames the price class rather than flattening its values, so condition 1
+catches it anyway.
 
 ## Measured timings, 2026-08-20
 
@@ -142,3 +147,10 @@ Consequences already in the code:
   re-resolved the package on every call.
 
 The repair path is a heal plus two scrapes, so budget four to six minutes, not 90 seconds. See Task 17.
+
+**Except for DEMO-SHOP.** `bdata scraper run --sync` routes through the CLI's synchronous endpoint,
+which answers inside a 25 to 50 second server cap instead of dropping into batch polling. Six products
+fit that cap with room to spare, so the demo collector asks for it via `RepairOpts.sync` and its
+repair path runs in about a minute rather than four to six. The two web collectors must never ask:
+a 250 row scrape does not fit the cap, and a sync call that overruns it returns nothing rather than
+late rows.
